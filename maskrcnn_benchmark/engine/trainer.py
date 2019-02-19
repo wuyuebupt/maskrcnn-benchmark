@@ -47,9 +47,13 @@ def do_train(
 ):
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
+    # exit()
     meters = MetricLogger(delimiter="  ")
     max_iter = len(data_loader)
     start_iter = arguments["iteration"]
+    # print ("anything out???")
+    # exit()
+
     model.train()
     start_training_time = time.time()
     end = time.time()
@@ -64,6 +68,10 @@ def do_train(
         targets = [target.to(device) for target in targets]
 
         loss_dict = model(images, targets)
+        # logger.info(loss_dict)
+        # print (loss_dict)
+        # print ("anything out???")
+        # exit()
 
         losses = sum(loss for loss in loss_dict.values())
 

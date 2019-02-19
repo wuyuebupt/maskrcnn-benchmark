@@ -26,8 +26,13 @@ from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
 
 
+import sys
+sys.stdout.flush()
+
 def train(cfg, local_rank, distributed):
     model = build_detection_model(cfg)
+    print (model)
+    # exit()
     device = torch.device(cfg.MODEL.DEVICE)
     model.to(device)
 

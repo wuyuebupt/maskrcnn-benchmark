@@ -52,6 +52,10 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             # this makes the API consistent during training and testing
             x, detections, loss_keypoint = self.keypoint(keypoint_features, detections, targets)
             losses.update(loss_keypoint)
+        # print (x)
+        # print (detections)
+        # print (losses)
+        # exit()
         return x, detections, losses
 
 
