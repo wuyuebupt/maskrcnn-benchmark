@@ -31,7 +31,8 @@ def get_extensions():
     print ('torch.cuda.is_available() : ', torch.cuda.is_available() )
     print ('CUDA_HOME is not None     : ', CUDA_HOME is not None )
 
-    if torch.cuda.is_available() and CUDA_HOME is not None:
+    # if torch.cuda.is_available() and CUDA_HOME is not None:
+    if CUDA_HOME is not None:
         extension = CUDAExtension
         sources += source_cuda
         define_macros += [("WITH_CUDA", None)]
