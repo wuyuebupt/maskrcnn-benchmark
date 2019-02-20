@@ -50,9 +50,11 @@ def do_train(
     # exit()
     meters = MetricLogger(delimiter="  ")
     max_iter = len(data_loader)
+    print (max_iter)
+    print (data_loader)
+    # exit()
     start_iter = arguments["iteration"]
     # print ("anything out???")
-    # exit()
 
     model.train()
     start_training_time = time.time()
@@ -64,8 +66,15 @@ def do_train(
 
         scheduler.step()
 
+        print (images)
+        print (targets)
+
         images = images.to(device)
         targets = [target.to(device) for target in targets]
+
+        print (images)
+        print (targets)
+        # exit()
 
         loss_dict = model(images, targets)
         # logger.info(loss_dict)

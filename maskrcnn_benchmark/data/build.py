@@ -31,7 +31,9 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
     datasets = []
     for dataset_name in dataset_list:
         data = dataset_catalog.get(dataset_name)
+        print (data.keys())
         factory = getattr(D, data["factory"])
+        print (factory)
         args = data["args"]
         # for COCODataset, we want to remove images without annotations
         # during training
@@ -42,8 +44,10 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
         args["transforms"] = transforms
         # make dataset from factory
         dataset = factory(**args)
+        print (dataset)
         datasets.append(dataset)
 
+    print (datasets)
     # for testing, return a list of datasets
     if not is_train:
         return datasets
@@ -53,6 +57,7 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
     if len(datasets) > 1:
         dataset = D.ConcatDataset(datasets)
 
+    print (dataset)
     return [dataset]
 
 
@@ -150,11 +155,16 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
     DatasetCatalog = paths_catalog.DatasetCatalog
     dataset_list = cfg.DATASETS.TRAIN if is_train else cfg.DATASETS.TEST
 
+    print (DatasetCatalog)
+    print (dataset_list)
+
     transforms = build_transforms(cfg, is_train)
     datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train)
+    print (datasets)
 
     data_loaders = []
     for dataset in datasets:
+        print (dataset)
         sampler = make_data_sampler(dataset, shuffle, is_distributed)
         batch_sampler = make_batch_data_sampler(
             dataset, sampler, aspect_grouping, images_per_gpu, num_iters, start_iter

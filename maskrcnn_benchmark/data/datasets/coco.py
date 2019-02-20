@@ -7,6 +7,11 @@ from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 
 
+from PIL import Image
+
+import os
+import os.path
+
 min_keypoints_per_image = 10
 
 
@@ -41,6 +46,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
         super(COCODataset, self).__init__(root, ann_file)
+        # store original ides
+        # self.ids_coco = list(self.coco.imgs.keys())
         # sort indices for reproducible results
         self.ids = sorted(self.ids)
 
@@ -64,7 +71,37 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         self.transforms = transforms
 
     def __getitem__(self, idx):
-        img, anno = super(COCODataset, self).__getitem__(idx)
+        ### have to re-write the image open  
+        # img, anno = super(COCODataset, self).__getitem__(idx)
+
+        ### implementation of the "super(COCODataset, self).__getitem__(idx)"
+        index = idx
+
+        coco = self.coco
+        
+        # print (index)
+        # img_id = self.ids_coco[index]
+        img_id = self.ids[index]
+        # print (img_id)
+        ann_ids = coco.getAnnIds(imgIds=img_id)
+        # print (ann_ids)
+        target = coco.loadAnns(ann_ids)
+        # print (target)
+        path = coco.loadImgs(img_id)[0]['file_name']
+
+        # print (self.root)
+        # print (path)
+
+        img = Image.open(os.path.join(self.root, path)).convert('RGB')
+        if self.transform is not None:
+            img = self.transform(img)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        img  = img
+        anno = target
+        # exit()
 
         # filter crowd annotations
         # TODO might be better to add an extra field
