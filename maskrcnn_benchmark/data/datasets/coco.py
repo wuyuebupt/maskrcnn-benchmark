@@ -11,6 +11,7 @@ from PIL import Image
 
 import os
 import os.path
+import h5py
 
 min_keypoints_per_image = 10
 
@@ -70,6 +71,16 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         self.id_to_img_map = {k: v for k, v in enumerate(self.ids)}
         self.transforms = transforms
 
+        ## load h5 files
+        print (ann_file)
+        ##
+        h5_file = ann_file + '.h5'
+        assert os.path.exists(h5_file), 'Path does not exist: {}'.format(h5_file)
+        annFile_basename = os.path.basename(ann_file)
+        self.h5_data = h5py.File(h5_file, 'r')[annFile_basename]
+        # print (len(self.h5_data))
+        # exit()
+
     def __getitem__(self, idx):
         ### have to re-write the image open  
         # img, anno = super(COCODataset, self).__getitem__(idx)
@@ -91,8 +102,27 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
 
         # print (self.root)
         # print (path)
+        
+        ## load from file
+        # img = Image.open(os.path.join(self.root, path)).convert('RGB')
+        # pixels = img.load()
+        # print (type(img))
+        # print (img)
+        # print (img.size)
 
-        img = Image.open(os.path.join(self.root, path)).convert('RGB')
+        # exit()
+        ## index from h5 file
+        key = path
+        # print (key)
+        img = self.h5_data[key][()]
+        # print (type(img))
+        img = Image.fromarray(img)
+        # pixelsv2 = img.load()
+        # print (pixels[0, 0], pixelsv2[0,0])
+        
+        # print (type(img))
+        # exit()
+
         if self.transform is not None:
             img = self.transform(img)
 

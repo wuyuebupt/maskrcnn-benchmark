@@ -66,14 +66,14 @@ def do_train(
 
         scheduler.step()
 
-        print (images)
-        print (targets)
+        # print (images)
+        # print (targets)
 
         images = images.to(device)
         targets = [target.to(device) for target in targets]
 
-        print (images)
-        print (targets)
+        # print (images)
+        # print (targets)
         # exit()
 
         loss_dict = model(images, targets)

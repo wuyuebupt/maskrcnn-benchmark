@@ -46,12 +46,12 @@ class GeneralizedRCNN(nn.Module):
         if self.training and targets is None:
             raise ValueError("In training mode, targets should be passed")
         
-        print (images)
-        print (images.tensors.shape)
-        print (images.image_sizes)
+        # print (images)
+        # print (images.tensors.shape)
+        # print (images.image_sizes)
         images = to_image_list(images)
-        print (images)
-        exit()
+        # print (images)
+        # exit()
         features = self.backbone(images.tensors)
         proposals, proposal_losses = self.rpn(images, features, targets)
         if self.roi_heads:

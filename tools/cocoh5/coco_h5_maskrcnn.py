@@ -52,7 +52,8 @@ if __name__ == '__main__':
 
             key = path
             # print (key)
-            dset = h5_group.create_dataset(key, data=img, chunks=None)
+            # dset = h5_group.create_dataset(key, data=img, chunks=None)
+            dset = h5_group.create_dataset(key, data=img)
             dset.attrs['path'] = key
 
             # exit()

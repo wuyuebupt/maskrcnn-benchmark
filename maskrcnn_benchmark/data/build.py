@@ -171,6 +171,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
         )
         collator = BatchCollator(cfg.DATALOADER.SIZE_DIVISIBILITY)
         num_workers = cfg.DATALOADER.NUM_WORKERS
+        print (num_workers)
         data_loader = torch.utils.data.DataLoader(
             dataset,
             num_workers=num_workers,
