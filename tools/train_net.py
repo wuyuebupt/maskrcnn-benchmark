@@ -136,7 +136,31 @@ def main():
         nargs=argparse.REMAINDER,
     )
 
+    ## add for philly
+    parser.add_argument(
+        "--data-dir",
+        default="",
+        metavar="DIR",
+        help="path to data folder",
+        type=str,
+    )
+    parser.add_argument(
+        "--output-dir",
+        default="",
+        metavar="DIR",
+        help="path to output folder",
+        type=str,
+    )
+    parser.add_argument(
+        "--pretrained-model",
+        default="",
+        help="path to pretrained model",
+        metavar="FILE",
+        type=str,
+    )
+
     args = parser.parse_args()
+    print (args.config_file)
 
     num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else 1
     args.distributed = num_gpus > 1
@@ -150,9 +174,23 @@ def main():
 
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
+
+    print (args.config_file)
+    print (args.output_dir)
+    print (args.pretrained_model)
+    print (args.data_dir)
+
+    cfg.DATA_DIR = args.data_dir
+    cfg.OUTPUT_DIR = args.output_dir
+    cfg.MODEL.WEIGHT = args.pretrained_model
     cfg.freeze()
 
     output_dir = cfg.OUTPUT_DIR
+    # print (output_dir)
+    # print (cfg.DATA_DIR)
+    # print (cfg.MODEL.WEIGHT)
+
+
     if output_dir:
         mkdir(output_dir)
 

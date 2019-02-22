@@ -155,8 +155,13 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
     DatasetCatalog = paths_catalog.DatasetCatalog
     dataset_list = cfg.DATASETS.TRAIN if is_train else cfg.DATASETS.TEST
 
-    print (DatasetCatalog)
-    print (dataset_list)
+    # print (DatasetCatalog)
+    # print (DatasetCatalog.DATA_DIR)
+    ## change the data folder
+    DatasetCatalog.DATA_DIR = cfg.DATA_DIR
+    print (DatasetCatalog.DATA_DIR)
+    # exit()
+    # print (dataset_list)
 
     transforms = build_transforms(cfg, is_train)
     datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train)
