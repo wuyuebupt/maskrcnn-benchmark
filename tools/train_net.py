@@ -158,6 +158,27 @@ def main():
         metavar="FILE",
         type=str,
     )
+    parser.add_argument(
+        "--nonlocal-num-group",
+        default="1",
+        help="nonlocal num group",
+        metavar="1",
+        type=int,
+    )
+    parser.add_argument(
+        "--nonlocal-num-stack",
+        default="1",
+        help="nonlocal num stack",
+        metavar="1",
+        type=int,
+    )
+    parser.add_argument(
+        "--bbox-expand",
+        default="1.0",
+        help="nonlocal num stack",
+        metavar="1.0",
+        type=float,
+    )
 
     args = parser.parse_args()
     print (args.config_file)
@@ -179,10 +200,16 @@ def main():
     print (args.output_dir)
     print (args.pretrained_model)
     print (args.data_dir)
+    print (args.nonlocal_num_group)
+    print (args.nonlocal_num_stack)
+    print (args.bbox_expand)
 
     cfg.DATA_DIR = args.data_dir
     cfg.OUTPUT_DIR = args.output_dir
     cfg.MODEL.WEIGHT = args.pretrained_model
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_NUM_GROUP = args.nonlocal_num_group
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_NUM_STACK = args.nonlocal_num_stack
+    cfg.MODEL.ROI_BOX_HEAD.NEIGHBOR_EXPAND = args.bbox_expand
     cfg.freeze()
 
     output_dir = cfg.OUTPUT_DIR

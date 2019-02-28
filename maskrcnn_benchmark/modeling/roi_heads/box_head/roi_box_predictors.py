@@ -5,6 +5,10 @@ from torch import nn
 from maskrcnn_benchmark.layers import Conv2d
 import torch.nn.functional as F
 from maskrcnn_benchmark.modeling.make_layers import group_norm
+from .attention import NONLocalBlock2D
+from .attention import NONLocalBlock2D_Group
+from .attention import ListModule
+
 
 
 @registry.ROI_BOX_PREDICTOR.register("FastRCNNPredictor")
@@ -28,14 +32,40 @@ class FastRCNNPredictor(nn.Module):
         nn.init.constant_(self.cls_score.bias, 0)
 
 
+        ### non-local 
+        ## original non-local
+        #self.reg_nonlocal = NONLocalBlock2D(num_inputs, sub_sample=False, bn_layer=False) 
+        ## group non-local
+        num_group = config.MODEL.ROI_BOX_HEAD.NONLOCAL_NUM_GROUP
+        self.num_stack = config.MODEL.ROI_BOX_HEAD.NONLOCAL_NUM_STACK
+
+        reg_nonlocal = []
+        for i in range(self.num_stack):
+            reg_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=num_group, sub_sample=False, bn_layer=False))
+        self.reg_nonlocal = ListModule(*reg_nonlocal)
         
+
+        self.bbox_pred = nn.Linear(num_inputs, num_bbox_reg_classes * 4)
+
+
+        ### convolution weights
         ## an extra conv with 2048 to 256
-        out_channels = 256
-        self.conv_reg = Conv2d(
-            num_inputs, out_channels, kernel_size=1, stride=1, padding=0, bias=False
-        )        
+        # out_channels = 256
+        # self.conv_reg = Conv2d(
+        #     num_inputs, out_channels, kernel_size=1, stride=1, padding=0, bias=False
+        # )        
         # self.bn_reg = group_norm(out_channels)
-        self.bbox_pred = nn.Linear(out_channels, num_bbox_reg_classes * 4)
+        ## v1
+        # self.conv_grid = Conv2d(out_channels, out_channels, kernel_size=7, stride=1, padding=0, bias=False)
+        # self.bbox_pred = nn.Linear(out_channels, num_bbox_reg_classes * 4)
+
+        ## v2
+        # self.conv_grid = Conv2d(out_channels, out_channels, kernel_size=3, stride=2, padding=1, bias=False)
+        # self.bbox_pred = nn.Linear(out_channels * 4 * 4, num_bbox_reg_classes * 4)
+
+        ## v3
+        # self.conv_grid = Conv2d(out_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
+        # self.bbox_pred = nn.Linear(out_channels * 7 * 7, num_bbox_reg_classes * 4)
 
         nn.init.normal_(self.bbox_pred.weight, mean=0, std=0.001)
         nn.init.constant_(self.bbox_pred.bias, 0)
@@ -50,14 +80,32 @@ class FastRCNNPredictor(nn.Module):
         x = x.view(x.size(0), -1)
         cls_logit = self.cls_score(x)
 
-        # for reg
-        out = self.conv_reg(identity)
-        # out = self.bn_reg(out)
-        out = F.relu_(out)
-
-        out = self.avgpool(out)
+        ### non-local for reg
+        for i in range(self.num_stack):
+            identity = self.reg_nonlocal[i](identity)
+        # print (out.shape)
+        # exit()
+        out = self.avgpool(identity)
         out = out.view(out.size(0), -1)
+
+
+        ### convolution for reg
+        # print (identity.shape)
+        # out = self.conv_reg(identity)
+        # out = F.relu_(out)
+        # print (out.shape)
+        # out = self.conv_grid(out)
+        # out = F.relu_(out)
+        # print (out.shape)
+
+        # out = self.avgpool(out)
+        # out = out.view(out.size(0), -1)
+        # print (out.shape)
+
+
         bbox_pred = self.bbox_pred(out)
+        # print (bbox_pred.shape)
+        # exit()
         
         ## old bbox_pred
         # bbox_pred = self.bbox_pred(x)
