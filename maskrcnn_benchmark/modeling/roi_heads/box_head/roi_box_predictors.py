@@ -36,12 +36,22 @@ class FastRCNNPredictor(nn.Module):
         ## original non-local
         #self.reg_nonlocal = NONLocalBlock2D(num_inputs, sub_sample=False, bn_layer=False) 
         ## group non-local
-        num_group = config.MODEL.ROI_BOX_HEAD.NONLOCAL_NUM_GROUP
-        self.num_stack = config.MODEL.ROI_BOX_HEAD.NONLOCAL_NUM_STACK
+        cls_num_group = config.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_GROUP
+        self.cls_num_stack = config.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_STACK
 
+        reg_num_group = config.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_GROUP
+        self.reg_num_stack = config.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK
+
+        nonlocal_use_bn = config.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN
+
+        cls_nonlocal = []
+        for i in range(self.cls_num_stack):
+            cls_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=cls_num_group, sub_sample=False, bn_layer=nonlocal_use_bn))
+        self.cls_nonlocal = ListModule(*cls_nonlocal)
+        
         reg_nonlocal = []
-        for i in range(self.num_stack):
-            reg_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=num_group, sub_sample=False, bn_layer=False))
+        for i in range(self.reg_num_stack):
+            reg_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=reg_num_group, sub_sample=False, bn_layer=nonlocal_use_bn))
         self.reg_nonlocal = ListModule(*reg_nonlocal)
         
 
@@ -76,12 +86,15 @@ class FastRCNNPredictor(nn.Module):
         identity = x
         # print (x.shape)
         # exit()
+        ### non-local for cls
+        for i in range(self.cls_num_stack):
+            x = self.cls_nonlocal[i](x)
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
         cls_logit = self.cls_score(x)
 
         ### non-local for reg
-        for i in range(self.num_stack):
+        for i in range(self.reg_num_stack):
             identity = self.reg_nonlocal[i](identity)
         # print (out.shape)
         # exit()

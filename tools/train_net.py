@@ -159,18 +159,39 @@ def main():
         type=str,
     )
     parser.add_argument(
-        "--nonlocal-num-group",
+        "--nonlocal-cls-num-group",
         default="1",
-        help="nonlocal num group",
+        help="nonlocal num group cls",
         metavar="1",
         type=int,
     )
     parser.add_argument(
-        "--nonlocal-num-stack",
-        default="1",
-        help="nonlocal num stack",
+        "--nonlocal-cls-num-stack",
+        default="0",
+        help="nonlocal num stack cls",
         metavar="1",
         type=int,
+    )
+    parser.add_argument(
+        "--nonlocal-reg-num-group",
+        default="1",
+        help="nonlocal num group reg",
+        metavar="1",
+        type=int,
+    )
+    parser.add_argument(
+        "--nonlocal-reg-num-stack",
+        default="0",
+        help="nonlocal num stack reg",
+        metavar="1",
+        type=int,
+    )
+    parser.add_argument(
+        "--nonlocal-use-bn",
+        default="True",
+        help="nonlocal use bn in all modules",
+        metavar="True",
+        type=bool,
     )
     parser.add_argument(
         "--bbox-expand",
@@ -200,16 +221,23 @@ def main():
     print (args.output_dir)
     print (args.pretrained_model)
     print (args.data_dir)
-    print (args.nonlocal_num_group)
-    print (args.nonlocal_num_stack)
+    print (args.nonlocal_cls_num_group)
+    print (args.nonlocal_cls_num_stack)
+    print (args.nonlocal_reg_num_group)
+    print (args.nonlocal_reg_num_stack)
+    print (args.nonlocal_use_bn)
     print (args.bbox_expand)
 
     cfg.DATA_DIR = args.data_dir
     cfg.OUTPUT_DIR = args.output_dir
     cfg.MODEL.WEIGHT = args.pretrained_model
-    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_NUM_GROUP = args.nonlocal_num_group
-    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_NUM_STACK = args.nonlocal_num_stack
     cfg.MODEL.ROI_BOX_HEAD.NEIGHBOR_EXPAND = args.bbox_expand
+
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_GROUP = args.nonlocal_cls_num_group
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_STACK = args.nonlocal_cls_num_stack
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_GROUP = args.nonlocal_reg_num_group
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK = args.nonlocal_reg_num_stack
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN = args.nonlocal_use_bn
     cfg.freeze()
 
     output_dir = cfg.OUTPUT_DIR

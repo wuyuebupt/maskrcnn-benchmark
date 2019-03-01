@@ -114,6 +114,8 @@ class _NonLocalBlockND_Group(nn.Module):
         for i in range(self.num_group):
             
             g_x = self.g[i](x).view(batch_size, self.inter_channels_group, -1)
+            ## relu
+            # g_x = F.relu_(g_x) 
             g_x = g_x.permute(0, 2, 1)
 
             theta_x = self.theta[i](x).view(batch_size, self.inter_channels_group, -1)
