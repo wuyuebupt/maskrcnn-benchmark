@@ -13,11 +13,12 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --pretrained-model ../../R-50.pkl \
 --data-dir ../maskrcnn-benchmark-file/datasets/ \
 --config-file $CONFIG_YAML \
---nonlocal-cls-num-group 1 \
---nonlocal-cls-num-stack 0 \
---nonlocal-reg-num-group 1 \
---nonlocal-reg-num-stack 0 \
---nonlocal-use-bn True \
+--nonlocal-cls-num-group 2 \
+--nonlocal-cls-num-stack 3 \
+--nonlocal-reg-num-group 2 \
+--nonlocal-reg-num-stack 3 \
+--nonlocal-use-bn False \
+--nonlocal-use-relu True \
 --bbox-expand  1.2
 
 

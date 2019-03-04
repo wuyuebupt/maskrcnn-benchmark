@@ -9,6 +9,7 @@ from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:sk
 
 import argparse
 import os
+import ast
 
 import torch
 from maskrcnn_benchmark.config import cfg
@@ -28,6 +29,8 @@ from maskrcnn_benchmark.utils.miscellaneous import mkdir
 
 import sys
 sys.stdout.flush()
+
+
 
 def train(cfg, local_rank, distributed):
     model = build_detection_model(cfg)
@@ -189,9 +192,16 @@ def main():
     parser.add_argument(
         "--nonlocal-use-bn",
         default="True",
-        help="nonlocal use bn in all modules",
+        help="nonlocal use bn after attention",
         metavar="True",
-        type=bool,
+        type=str,
+    )
+    parser.add_argument(
+        "--nonlocal-use-relu",
+        default="True",
+        help="nonlocal use relu after bn",
+        metavar="True",
+        type=str,
     )
     parser.add_argument(
         "--bbox-expand",
@@ -226,6 +236,7 @@ def main():
     print (args.nonlocal_reg_num_group)
     print (args.nonlocal_reg_num_stack)
     print (args.nonlocal_use_bn)
+    print (args.nonlocal_use_relu)
     print (args.bbox_expand)
 
     cfg.DATA_DIR = args.data_dir
@@ -237,8 +248,10 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_STACK = args.nonlocal_cls_num_stack
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_GROUP = args.nonlocal_reg_num_group
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK = args.nonlocal_reg_num_stack
-    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN = args.nonlocal_use_bn
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN = ast.literal_eval(args.nonlocal_use_bn)
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU = ast.literal_eval(args.nonlocal_use_relu)
     cfg.freeze()
+    # print (cfg)
 
     output_dir = cfg.OUTPUT_DIR
     # print (output_dir)

@@ -27,7 +27,7 @@ class ListModule(nn.Module):
 
 ### group non local
 class _NonLocalBlockND_Group(nn.Module):
-    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True):
+    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True):
         super(_NonLocalBlockND_Group, self).__init__()
 
         assert dimension in [1, 2, 3]
@@ -50,6 +50,7 @@ class _NonLocalBlockND_Group(nn.Module):
         conv_nd = nn.Conv2d
         max_pool_layer = nn.MaxPool2d(kernel_size=(2, 2))
         bn = nn.BatchNorm2d
+        relu = nn.ReLU
 
         assert self.num_group <= self.inter_channels
 
@@ -86,19 +87,65 @@ class _NonLocalBlockND_Group(nn.Module):
             self.g = nn.Sequential(self.g, max_pool_layer)
             self.phi = nn.Sequential(self.phi, max_pool_layer)
 
+
+
+        ## v2 
+        self.W = nn.Sequential(conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
+                         kernel_size=1, stride=1, padding=0))
+        print (self.W)
+        ## BN first then RELU
         if bn_layer:
-            self.W = nn.Sequential(
-                conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
-                        kernel_size=1, stride=1, padding=0),
-                bn(self.in_channels)
+            self.W.add_module(
+                'bn', bn(self.in_channels)
             )
-            nn.init.constant_(self.W[1].weight, 0)
-            nn.init.constant_(self.W[1].bias, 0)
-        else:
-            self.W = conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
-                             kernel_size=1, stride=1, padding=0)
-            nn.init.constant_(self.W.weight, 0)
-            nn.init.constant_(self.W.bias, 0)
+        if relu_layer:
+            self.W.add_module( 
+                'relu', relu(inplace=True)
+            )
+        print (self.W)
+
+        ## init the weights
+        nn.init.constant_(self.W[0].weight, 0)
+        nn.init.constant_(self.W[0].bias, 0)
+
+        #if relu_layer or bn_layer:
+        #    nn.init.constant_(self.W[1].weight, 0)
+        #    nn.init.constant_(self.W[1].bias, 0)
+        #else:
+        #    nn.init.constant_(self.W.weight, 0)
+        #    nn.init.constant_(self.W.bias, 0)
+        
+        ## v1
+        # if bn_layer & relu_layer:
+        #     self.W = nn.Sequential(
+        #         conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
+        #                 kernel_size=1, stride=1, padding=0),
+        #         relu(inplace=True), 
+        #         bn(self.in_channels)
+        #     )
+        #     nn.init.constant_(self.W[1].weight, 0)
+        #     nn.init.constant_(self.W[1].bias, 0)
+        # elif bn_layer & not relu_layer:
+        #     self.W = nn.Sequential(
+        #         conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
+        #                 kernel_size=1, stride=1, padding=0),
+        #         bn(self.in_channels)
+        #     )
+        #     nn.init.constant_(self.W[1].weight, 0)
+        #     nn.init.constant_(self.W[1].bias, 0)
+        #  elif not bn_layer & relu_layer:
+        #     self.W = nn.Sequential(
+        #         conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
+        #                 kernel_size=1, stride=1, padding=0),
+        #         relu(inplace=True)
+        #     )
+        #     nn.init.constant_(self.W[1].weight, 0)
+        #     nn.init.constant_(self.W[1].bias, 0)
+        # else:
+        #     self.W = conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
+        #                      kernel_size=1, stride=1, padding=0)
+        #     nn.init.constant_(self.W.weight, 0)
+        #     nn.init.constant_(self.W.bias, 0)
 
 
     def forward(self, x):
@@ -147,12 +194,12 @@ class _NonLocalBlockND_Group(nn.Module):
         return z
 
 class NONLocalBlock2D_Group(_NonLocalBlockND_Group):
-    def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True):
+    def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True, relu_layer=True):
         super(NONLocalBlock2D_Group, self).__init__(in_channels,
                                               num_group=num_group,
                                               inter_channels=inter_channels,
                                               dimension=2, sub_sample=sub_sample,
-                                              bn_layer=bn_layer)
+                                              bn_layer=bn_layer, relu_layer=relu_layer)
 
 
 ## original non local

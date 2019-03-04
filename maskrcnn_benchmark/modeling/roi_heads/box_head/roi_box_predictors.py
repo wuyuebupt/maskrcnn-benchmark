@@ -43,15 +43,16 @@ class FastRCNNPredictor(nn.Module):
         self.reg_num_stack = config.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK
 
         nonlocal_use_bn = config.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN
+        nonlocal_use_relu = config.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU
 
         cls_nonlocal = []
         for i in range(self.cls_num_stack):
-            cls_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=cls_num_group, sub_sample=False, bn_layer=nonlocal_use_bn))
+            cls_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=cls_num_group, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu))
         self.cls_nonlocal = ListModule(*cls_nonlocal)
         
         reg_nonlocal = []
         for i in range(self.reg_num_stack):
-            reg_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=reg_num_group, sub_sample=False, bn_layer=nonlocal_use_bn))
+            reg_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=reg_num_group, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu))
         self.reg_nonlocal = ListModule(*reg_nonlocal)
         
 
