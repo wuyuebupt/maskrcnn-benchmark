@@ -51,6 +51,7 @@ class _NonLocalBlockND_Group(nn.Module):
         max_pool_layer = nn.MaxPool2d(kernel_size=(2, 2))
         bn = nn.BatchNorm2d
         relu = nn.ReLU
+        self.relu_layer = relu_layer
 
         assert self.num_group <= self.inter_channels
 
@@ -88,7 +89,6 @@ class _NonLocalBlockND_Group(nn.Module):
             self.phi = nn.Sequential(self.phi, max_pool_layer)
 
 
-
         ## v2 
         self.W = nn.Sequential(conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
                          kernel_size=1, stride=1, padding=0))
@@ -98,10 +98,11 @@ class _NonLocalBlockND_Group(nn.Module):
             self.W.add_module(
                 'bn', bn(self.in_channels)
             )
-        if relu_layer:
-            self.W.add_module( 
-                'relu', relu(inplace=True)
-            )
+
+        # if relu_layer:
+        #     self.W.add_module( 
+        #         'relu', relu(inplace=True)
+        #     )
         print (self.W)
 
         ## init the weights
@@ -190,6 +191,10 @@ class _NonLocalBlockND_Group(nn.Module):
         y_out = y_out.view(batch_size, self.inter_channels, *x.size()[2:])
         W_y = self.W(y_out)
         z = W_y + x
+
+        ## relu after residual
+        if self.relu_layer:
+            z = F.relu_(z)
 
         return z
 

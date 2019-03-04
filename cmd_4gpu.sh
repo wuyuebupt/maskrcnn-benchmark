@@ -17,7 +17,7 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --nonlocal-cls-num-stack 3 \
 --nonlocal-reg-num-group 2 \
 --nonlocal-reg-num-stack 3 \
---nonlocal-use-bn False \
+--nonlocal-use-bn True \
 --nonlocal-use-relu True \
 --bbox-expand  1.2
 
