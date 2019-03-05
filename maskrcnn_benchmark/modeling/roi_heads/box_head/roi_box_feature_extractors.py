@@ -85,6 +85,51 @@ class ResNet50Conv5ROIFeatureExtractor(nn.Module):
         return x
 
 
+@registry.ROI_BOX_FEATURE_EXTRACTORS.register("FPN2MLPFeatureExtractorNeighbor")
+class FPN2MLPFeatureExtractorNeighbor(nn.Module):
+    """
+    Heads for FPN for classification
+    """
+
+    def __init__(self, cfg):
+        super(FPN2MLPFeatureExtractorNeighbor, self).__init__()
+
+        resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
+        scales = cfg.MODEL.ROI_BOX_HEAD.POOLER_SCALES
+        sampling_ratio = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
+
+        neighbor_expand = cfg.MODEL.ROI_BOX_HEAD.NEIGHBOR_EXPAND
+        roi_expand = cfg.MODEL.ROI_BOX_HEAD.ROI_EXPAND
+        pooler = PoolerNeighbor(
+            neighbor_expand=neighbor_expand,
+            roi_expand=roi_expand,
+            output_size=(resolution, resolution),
+            scales=scales,
+            sampling_ratio=sampling_ratio,
+        )
+        # pooler = Pooler(
+        #     output_size=(resolution, resolution),
+        #     scales=scales,
+        #     sampling_ratio=sampling_ratio,
+        # )
+        input_size = cfg.MODEL.BACKBONE.OUT_CHANNELS * resolution ** 2
+        representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
+        use_gn = cfg.MODEL.ROI_BOX_HEAD.USE_GN
+        self.pooler = pooler
+        self.fc6 = make_fc(input_size, representation_size, use_gn)
+        self.fc7 = make_fc(representation_size, representation_size, use_gn)
+
+    def forward(self, x, proposals):
+        x = self.pooler(x, proposals)
+        x = x.view(x.size(0), -1)
+
+        x = F.relu(self.fc6(x))
+        x = F.relu(self.fc7(x))
+
+        return x
+
+
+
 @registry.ROI_BOX_FEATURE_EXTRACTORS.register("FPN2MLPFeatureExtractor")
 class FPN2MLPFeatureExtractor(nn.Module):
     """
