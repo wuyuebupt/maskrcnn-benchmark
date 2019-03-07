@@ -27,7 +27,7 @@ class ListModule(nn.Module):
 
 ### group non local
 class _NonLocalBlockND_Group(nn.Module):
-    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True):
+    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True):
         super(_NonLocalBlockND_Group, self).__init__()
 
         assert dimension in [1, 2, 3]
@@ -52,6 +52,8 @@ class _NonLocalBlockND_Group(nn.Module):
         bn = nn.BatchNorm2d
         relu = nn.ReLU
         self.relu_layer = relu_layer
+
+        self.use_softmax = use_softmax
 
         assert self.num_group <= self.inter_channels
 
@@ -170,10 +172,20 @@ class _NonLocalBlockND_Group(nn.Module):
             theta_x = theta_x.permute(0, 2, 1)
             phi_x = self.phi[i](x).view(batch_size, self.inter_channels_group, -1)
             f = torch.matmul(theta_x, phi_x)
-            N = f.size(-1)
-            f_div_C = f / N
-            # print (N)
-            # print (f_div_C.shape)
+
+            if self.use_softmax == True:
+                f_div_C = F.softmax(f, 1, _stacklevel=4)
+            else:
+                N = f.size(-1)
+                # print (f.shape)
+                f_div_C = f / N
+                # print (N)
+                # print (f_div_C.shape)
+
+                # print (f_div_C[0,:,:])
+                # print (f[0,:,:])
+                # print (f_softmax[0,:,:])
+                # print (f_softmax.shape)
 
             y = torch.matmul(f_div_C, g_x)
             y = y.permute(0, 2, 1).contiguous()
@@ -199,12 +211,12 @@ class _NonLocalBlockND_Group(nn.Module):
         return z
 
 class NONLocalBlock2D_Group(_NonLocalBlockND_Group):
-    def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True, relu_layer=True):
+    def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True):
         super(NONLocalBlock2D_Group, self).__init__(in_channels,
                                               num_group=num_group,
                                               inter_channels=inter_channels,
                                               dimension=2, sub_sample=sub_sample,
-                                              bn_layer=bn_layer, relu_layer=relu_layer)
+                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax)
 
 
 ## original non local

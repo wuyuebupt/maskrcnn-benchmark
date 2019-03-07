@@ -129,6 +129,8 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
 
         nonlocal_use_bn = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN
         nonlocal_use_relu = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU
+        nonlocal_use_softmax = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SOFTMAX
+        nonlocal_inter_channels = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_INTER_CHANNELS
 
         self.nonlocal_use_shared = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SHARED
 
@@ -140,7 +142,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
             self.shared_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK
             shared_nonlocal = []
             for i in range(self.shared_num_stack):
-                shared_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=shared_num_group, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu))
+                shared_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=shared_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
             self.shared_nonlocal = ListModule(*shared_nonlocal)
 
             self.fc6 = make_fc(input_size, representation_size, use_gn)
@@ -158,12 +160,12 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
 
             cls_nonlocal = []
             for i in range(self.cls_num_stack):
-                cls_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=cls_num_group, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu))
+                cls_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=cls_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
             self.cls_nonlocal = ListModule(*cls_nonlocal)
 
             reg_nonlocal = []
             for i in range(self.reg_num_stack):
-                reg_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=reg_num_group, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu))
+                reg_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=reg_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
             self.reg_nonlocal = ListModule(*reg_nonlocal)
 
             self.fc6_cls = make_fc(input_size, representation_size, use_gn)

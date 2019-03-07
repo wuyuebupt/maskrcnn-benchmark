@@ -225,6 +225,13 @@ def main():
         type=str,
     )
     parser.add_argument(
+        "--nonlocal-use-softmax",
+        default="False",
+        help="nonlocal use softmax other than div",
+        metavar="False",
+        type=str,
+    )
+    parser.add_argument(
         "--nonlocal-use-relu",
         default="True",
         help="nonlocal use relu after bn",
@@ -269,6 +276,7 @@ def main():
     print (args.nonlocal_use_bn)
     print (args.nonlocal_use_relu)
     print (args.nonlocal_inter_channels)
+    print (args.nonlocal_use_softmax)
     print (args.bbox_expand)
 
     cfg.DATA_DIR = args.data_dir
@@ -285,6 +293,7 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_INTER_CHANNELS = args.nonlocal_inter_channels
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SHARED = ast.literal_eval(args.nonlocal_use_shared)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN = ast.literal_eval(args.nonlocal_use_bn)
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SOFTMAX = ast.literal_eval(args.nonlocal_use_softmax)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU = ast.literal_eval(args.nonlocal_use_relu)
     cfg.freeze()
     # print (cfg)
