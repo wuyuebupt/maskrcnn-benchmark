@@ -232,6 +232,9 @@ class PoolerNeighbor(nn.Module):
             result (Tensor)
         """
         num_levels = len(self.poolers)
+        # print (num_levels)
+        # print (self.poolers[0])
+
         # print (boxes)
         rois = self.convert_to_roi_format(boxes)
         # print (rois)
@@ -242,6 +245,7 @@ class PoolerNeighbor(nn.Module):
             return self.poolers[0](x[0], rois)
 
         levels = self.map_levels(boxes)
+        # print (levels)
 
         num_rois = len(rois)
         num_channels = x[0].shape[1]
@@ -257,6 +261,8 @@ class PoolerNeighbor(nn.Module):
             idx_in_level = torch.nonzero(levels == level).squeeze(1)
             rois_per_level = rois[idx_in_level]
             result[idx_in_level] = pooler(per_level_feature, rois_per_level)
+            # print (idx_in_level)
+            # print (result.shape)
 
         # print (result)
         # print (result.shape)

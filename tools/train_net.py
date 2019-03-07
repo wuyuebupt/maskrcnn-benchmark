@@ -190,6 +190,27 @@ def main():
         type=int,
     )
     parser.add_argument(
+        "--nonlocal-shared-num-group",
+        default="1",
+        help="nonlocal num group reg",
+        metavar="1",
+        type=int,
+    )
+    parser.add_argument(
+        "--nonlocal-shared-num-stack",
+        default="0",
+        help="nonlocal num stack reg",
+        metavar="1",
+        type=int,
+    )
+    parser.add_argument(
+        "--nonlocal-use-shared",
+        default="True",
+        help="nonlocal use shared non-locael",
+        metavar="True",
+        type=str,
+    )
+    parser.add_argument(
         "--nonlocal-use-bn",
         default="True",
         help="nonlocal use bn after attention",
@@ -235,6 +256,9 @@ def main():
     print (args.nonlocal_cls_num_stack)
     print (args.nonlocal_reg_num_group)
     print (args.nonlocal_reg_num_stack)
+    print (args.nonlocal_shared_num_group)
+    print (args.nonlocal_shared_num_stack)
+    print (args.nonlocal_use_shared)
     print (args.nonlocal_use_bn)
     print (args.nonlocal_use_relu)
     print (args.bbox_expand)
@@ -248,6 +272,9 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_STACK = args.nonlocal_cls_num_stack
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_GROUP = args.nonlocal_reg_num_group
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK = args.nonlocal_reg_num_stack
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_GROUP = args.nonlocal_shared_num_group
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK = args.nonlocal_shared_num_stack
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SHARED = ast.literal_eval(args.nonlocal_use_shared)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN = ast.literal_eval(args.nonlocal_use_bn)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU = ast.literal_eval(args.nonlocal_use_relu)
     cfg.freeze()

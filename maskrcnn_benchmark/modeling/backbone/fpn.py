@@ -48,6 +48,11 @@ class FPN(nn.Module):
             results (tuple[Tensor]): feature maps after FPN layers.
                 They are ordered from highest resolution first.
         """
+        # print (len(x))
+        # print (x[0].shape)
+        # print (x[1].shape)
+        # print (x[2].shape)
+        # print (x[3].shape)
         last_inner = getattr(self, self.inner_blocks[-1])(x[-1])
         results = []
         results.append(getattr(self, self.layer_blocks[-1])(last_inner))
@@ -71,6 +76,11 @@ class FPN(nn.Module):
             last_results = self.top_blocks(results[-1])
             results.extend(last_results)
 
+        # print(results[0].shape)
+        # print(results[1].shape)
+        # print(results[2].shape)
+        # print(results[3].shape)
+        # print(results[4].shape)
         return tuple(results)
 
 

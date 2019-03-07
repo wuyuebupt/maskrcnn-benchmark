@@ -126,6 +126,35 @@ class FastRCNNPredictor(nn.Module):
         return cls_logit, bbox_pred
 
 
+@registry.ROI_BOX_PREDICTOR.register("FPNPredictorNeighbor")
+class FPNPredictorNeighbor(nn.Module):
+    def __init__(self, cfg):
+        super(FPNPredictorNeighbor, self).__init__()
+        num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
+        representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
+
+        self.cls_score = nn.Linear(representation_size, num_classes)
+        num_bbox_reg_classes = 2 if cfg.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
+        self.bbox_pred = nn.Linear(representation_size, num_bbox_reg_classes * 4)
+
+        nn.init.normal_(self.cls_score.weight, std=0.01)
+        nn.init.normal_(self.bbox_pred.weight, std=0.001)
+        for l in [self.cls_score, self.bbox_pred]:
+            nn.init.constant_(l.bias, 0)
+
+        self.nonlocal_use_shared = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SHARED
+
+    def forward(self, x):
+        if self.nonlocal_use_shared == True:
+            scores = self.cls_score(x)
+            bbox_deltas = self.bbox_pred(x)
+        else:
+            scores = self.cls_score(x[0])
+            bbox_deltas = self.bbox_pred(x[1])
+
+
+        return scores, bbox_deltas
+
 @registry.ROI_BOX_PREDICTOR.register("FPNPredictor")
 class FPNPredictor(nn.Module):
     def __init__(self, cfg):
@@ -147,6 +176,7 @@ class FPNPredictor(nn.Module):
         bbox_deltas = self.bbox_pred(x)
 
         return scores, bbox_deltas
+
 
 
 def make_roi_box_predictor(cfg):

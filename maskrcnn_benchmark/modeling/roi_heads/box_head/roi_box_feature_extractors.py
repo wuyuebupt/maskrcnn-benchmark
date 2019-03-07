@@ -10,6 +10,12 @@ from maskrcnn_benchmark.modeling.poolers import PoolerNeighbor
 from maskrcnn_benchmark.modeling.make_layers import group_norm
 from maskrcnn_benchmark.modeling.make_layers import make_fc
 
+from .attention import NONLocalBlock2D
+from .attention import NONLocalBlock2D_Group
+from .attention import ListModule
+
+
+
 @registry.ROI_BOX_FEATURE_EXTRACTORS.register("ResNet50Conv5ROIFeatureExtractorNeighbor")
 class ResNet50Conv5ROIFeatureExtractorNeighbor(nn.Module):
     def __init__(self, config):
@@ -112,21 +118,97 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         #     scales=scales,
         #     sampling_ratio=sampling_ratio,
         # )
+
+        num_inputs = cfg.MODEL.BACKBONE.OUT_CHANNELS
         input_size = cfg.MODEL.BACKBONE.OUT_CHANNELS * resolution ** 2
         representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
         use_gn = cfg.MODEL.ROI_BOX_HEAD.USE_GN
         self.pooler = pooler
-        self.fc6 = make_fc(input_size, representation_size, use_gn)
-        self.fc7 = make_fc(representation_size, representation_size, use_gn)
+
+
+
+        nonlocal_use_bn = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN
+        nonlocal_use_relu = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU
+
+        self.nonlocal_use_shared = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SHARED
+
+
+
+        ## shared non-local
+        if self.nonlocal_use_shared == True:
+            shared_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_GROUP
+            self.shared_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK
+            shared_nonlocal = []
+            for i in range(self.shared_num_stack):
+                shared_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=shared_num_group, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu))
+            self.shared_nonlocal = ListModule(*shared_nonlocal)
+
+            self.fc6 = make_fc(input_size, representation_size, use_gn)
+            self.fc7 = make_fc(representation_size, representation_size, use_gn)
+        else:
+            ## seperate group non-local, before fc6 and fc7
+            cls_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_GROUP
+            self.cls_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_STACK
+
+            reg_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_GROUP
+            self.reg_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK
+
+            nonlocal_use_bn = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN
+            nonlocal_use_relu = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU
+
+            cls_nonlocal = []
+            for i in range(self.cls_num_stack):
+                cls_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=cls_num_group, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu))
+            self.cls_nonlocal = ListModule(*cls_nonlocal)
+
+            reg_nonlocal = []
+            for i in range(self.reg_num_stack):
+                reg_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=reg_num_group, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu))
+            self.reg_nonlocal = ListModule(*reg_nonlocal)
+
+            self.fc6_cls = make_fc(input_size, representation_size, use_gn)
+            self.fc7_cls = make_fc(representation_size, representation_size, use_gn)
+            self.fc6_reg = make_fc(input_size, representation_size, use_gn)
+            self.fc7_reg = make_fc(representation_size, representation_size, use_gn)
+
 
     def forward(self, x, proposals):
+        # print (len(x))
+        # print (x[0].shape)
+        # print (x[1].shape)
+        # print (x[2].shape)
+        # print (x[3].shape)
+        # print (x[4].shape)
         x = self.pooler(x, proposals)
-        x = x.view(x.size(0), -1)
 
-        x = F.relu(self.fc6(x))
-        x = F.relu(self.fc7(x))
+        if self.nonlocal_use_shared == True:
+            # print (x.shape)
+            for i in range(self.shared_num_stack):
+                x = self.shared_nonlocal[i](x)
+            # exit()
 
-        return x
+            x = x.view(x.size(0), -1)
+            x = F.relu(self.fc6(x))
+            x = F.relu(self.fc7(x))
+            return x
+        else:
+            x_cls = x
+            x_reg = x
+            for i in range(self.cls_num_stack):
+                x_cls = self.cls_nonlocal[i](x_cls)
+            for i in range(self.reg_num_stack):
+                x_reg = self.reg_nonlocal[i](x_reg)
+             
+            x_cls = x_cls.view(x_cls.size(0), -1)
+            x_cls = F.relu(self.fc6_cls(x_cls))
+            x_cls = F.relu(self.fc7_cls(x_cls))
+
+            x_reg = x_reg.view(x_reg.size(0), -1)
+            x_reg = F.relu(self.fc6_reg(x_reg))
+            x_reg = F.relu(self.fc7_reg(x_reg))
+            return tuple((x_cls, x_reg))
+
+        # return x
 
 
 
