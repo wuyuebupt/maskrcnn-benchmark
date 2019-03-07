@@ -204,6 +204,13 @@ def main():
         type=int,
     )
     parser.add_argument(
+        "--nonlocal-inter-channels",
+        default="256",
+        help="nonlocal inter channels, c4 < 2048, fpn < 256",
+        metavar="256",
+        type=int,
+    )
+    parser.add_argument(
         "--nonlocal-use-shared",
         default="True",
         help="nonlocal use shared non-locael",
@@ -261,6 +268,7 @@ def main():
     print (args.nonlocal_use_shared)
     print (args.nonlocal_use_bn)
     print (args.nonlocal_use_relu)
+    print (args.nonlocal_inter_channels)
     print (args.bbox_expand)
 
     cfg.DATA_DIR = args.data_dir
@@ -274,6 +282,7 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK = args.nonlocal_reg_num_stack
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_GROUP = args.nonlocal_shared_num_group
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK = args.nonlocal_shared_num_stack
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_INTER_CHANNELS = args.nonlocal_inter_channels
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SHARED = ast.literal_eval(args.nonlocal_use_shared)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN = ast.literal_eval(args.nonlocal_use_bn)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU = ast.literal_eval(args.nonlocal_use_relu)
