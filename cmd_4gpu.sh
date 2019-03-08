@@ -1,7 +1,7 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
 export NGPUS=4
-export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v6/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v7/
 
 ### for images/gpu = 1
 ### Resnet 50, C4
@@ -10,19 +10,21 @@ export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v6/
 # export INTER_CHANNELS=1024
 
 ### Resnet 101, C4
-export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_101_C4_1x_neighbor_bs4.yaml
-export PRETRAIN_MODEL=../../R-101.pkl
-export INTER_CHANNELS=1024
+# export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_101_C4_1x_neighbor_bs4.yaml
+# export PRETRAIN_MODEL=../../R-101.pkl
+# export INTER_CHANNELS=1024
 
 ### Resnet 50, FPN
 # export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_50_FPN_1x_neighbor_bs4.yaml
 # export PRETRAIN_MODEL=../../R-50.pkl
-# export INTER_CHANNELS=256
+# export OUT_CHANNELS=2048
+# export INTER_CHANNELS=1024
 
 ### Resnet 101, FPN
 # export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_101_FPN_1x_neighbor_bs4.yaml
 # export PRETRAIN_MODEL=../../R-101.pkl
-# export INTER_CHANNELS=256
+# export OUT_CHANNELS=2048
+# export INTER_CHANNELS=1024
 
 
 
@@ -38,14 +40,16 @@ export INTER_CHANNELS=1024
 # export INTER_CHANNELS=1024
 
 ### Resnet 50, FPN
-# export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_50_FPN_1x_neighbor_bs8.yaml
-# export PRETRAIN_MODEL=../../R-50.pkl
-# export INTER_CHANNELS=256
+export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_50_FPN_1x_neighbor_bs8.yaml
+export PRETRAIN_MODEL=../../R-50.pkl
+export OUT_CHANNELS=2048
+export INTER_CHANNELS=1024
 
 ### Resnet 101, FPN
 # export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_101_FPN_1x_neighbor_bs8.yaml
 # export PRETRAIN_MODEL=../../R-101.pkl
-# export INTER_CHANNELS=256
+# export OUT_CHANNELS=2048
+# export INTER_CHANNELS=1024
 
 
 python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
@@ -64,6 +68,7 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --nonlocal-use-relu True \
 --nonlocal-use-softmax True \
 --nonlocal-inter-channels $INTER_CHANNELS \
+--nonlocal-out-channels $OUT_CHANNELS \
 --bbox-expand  1.2
 
 

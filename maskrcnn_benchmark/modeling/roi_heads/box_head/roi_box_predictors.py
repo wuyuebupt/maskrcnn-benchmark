@@ -138,7 +138,8 @@ class FPNPredictorNeighbor(nn.Module):
     def __init__(self, cfg):
         super(FPNPredictorNeighbor, self).__init__()
         num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
-        representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
+        # representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
+        representation_size = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
 
         self.cls_score = nn.Linear(representation_size, num_classes)
         num_bbox_reg_classes = 2 if cfg.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
