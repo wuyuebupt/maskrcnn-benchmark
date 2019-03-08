@@ -55,6 +55,10 @@ class _NonLocalBlockND_Group(nn.Module):
 
         self.use_softmax = use_softmax
 
+        if self.use_softmax:
+            self.softmax = nn.Softmax(dim=2)
+     
+
         assert self.num_group <= self.inter_channels
 
         self.inter_channels_group = self.inter_channels // self.num_group
@@ -174,13 +178,21 @@ class _NonLocalBlockND_Group(nn.Module):
             f = torch.matmul(theta_x, phi_x)
 
             if self.use_softmax == True:
-                f_div_C = F.softmax(f, 1, _stacklevel=4)
+                # f_div_C = F.softmax(f, 1, _stacklevel=4)
+                f_div_C = self.softmax(f)
+                # print (f_div_C.shape)
+                # print (f[0,0,:])
+                # print (f_div_C[0,0,:])
+                # print (torch.sum(f_div_C[0,0,:]))
+
+                # exit()
             else:
                 N = f.size(-1)
                 # print (f.shape)
                 f_div_C = f / N
                 # print (N)
                 # print (f_div_C.shape)
+                # exit()
 
                 # print (f_div_C[0,:,:])
                 # print (f[0,:,:])

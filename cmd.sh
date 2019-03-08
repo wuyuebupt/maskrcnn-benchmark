@@ -38,5 +38,5 @@ python  tools/train_net.py \
 --nonlocal-use-shared True \
 --nonlocal-use-bn True \
 --nonlocal-use-relu True \
---nonlocal-use-softmax False \
+--nonlocal-use-softmax True \
 --bbox-expand  1.2
