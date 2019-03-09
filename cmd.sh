@@ -1,6 +1,6 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
-export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v7/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/ttt/
 
 ### Resnet 50, C4
 # export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_50_C4_1x_neighbor.yaml

@@ -136,8 +136,10 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         ## add conv and pool like faster rcnn
         self.avgpool = nn.AvgPool2d(kernel_size=7, stride=7)
         out_channels = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
-        self.nonlocal_conv = Conv2d(
-            num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False
+        self.nonlocal_conv = nn.Sequential(
+             Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+             nn.BatchNorm2d(out_channels),
+             nn.ReLU()
         )
 
 
