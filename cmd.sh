@@ -1,6 +1,7 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
-export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v6/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/vis-models/
+
 
 ### Resnet 50, C4
 # export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_50_C4_1x_neighbor.yaml
@@ -32,11 +33,11 @@ python  tools/train_net.py \
 --nonlocal-cls-num-stack 1 \
 --nonlocal-reg-num-group 1 \
 --nonlocal-reg-num-stack 1 \
---nonlocal-shared-num-group 1 \
+--nonlocal-shared-num-group 4 \
 --nonlocal-shared-num-stack 1 \
 --nonlocal-inter-channels $INTER_CHANNELS \
 --nonlocal-use-shared True \
 --nonlocal-use-bn True \
 --nonlocal-use-relu True \
---nonlocal-use-softmax True \
+--nonlocal-use-softmax False \
 --bbox-expand  1.2

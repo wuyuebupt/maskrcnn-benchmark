@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+import numpy as np
 
 
 class ListModule(nn.Module):
@@ -165,8 +166,12 @@ class _NonLocalBlockND_Group(nn.Module):
         # print (batch_size)
 
         y_group = []
+
+        attention_vis = []
         for i in range(self.num_group):
             
+            print (i)
+           
             g_x = self.g[i](x).view(batch_size, self.inter_channels_group, -1)
             ## relu
             # g_x = F.relu_(g_x) 
@@ -188,8 +193,21 @@ class _NonLocalBlockND_Group(nn.Module):
                 # exit()
             else:
                 N = f.size(-1)
-                # print (f.shape)
+                print (f.shape)
                 f_div_C = f / N
+
+                ## for visualization 
+                print (f_div_C)
+                f_attention = torch.sum(f_div_C, dim=1)
+                f_tmp = torch.sum(f_div_C[0,:,0])
+                print (f_tmp)
+                print (f_attention.shape)
+                print (f_attention)
+                f_attention_view = f_attention.view(7,7).cpu().numpy()
+                print (f_attention_view)
+                print (f_attention_view.shape)
+                attention_vis.append(f_attention_view)
+                
                 # print (N)
                 # print (f_div_C.shape)
                 # exit()
@@ -204,6 +222,15 @@ class _NonLocalBlockND_Group(nn.Module):
             # print (y.shape)
             y_group.append(y)
 
+
+        print (attention_vis)
+        attention_np = np.asarray(attention_vis)
+        print (attention_np.shape)
+        savefile = 'attention/attention.bin'
+
+        fid = open(savefile, 'wb')
+        attention_np.tofile(fid)
+        # exit()
         # y_out = torch.stack(y_group, dim=1)
         y_out = torch.cat(y_group, dim=1)
         # print (y_out.shape)

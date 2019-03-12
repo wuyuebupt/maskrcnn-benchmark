@@ -12,20 +12,84 @@ from ..utils.comm import is_main_process
 from ..utils.comm import all_gather
 from ..utils.comm import synchronize
 
+import cv2
+import numpy as np
 
 def compute_on_dataset(model, data_loader, device):
     model.eval()
     results_dict = {}
     cpu_device = torch.device("cpu")
+
+
+    num_ind = 24
+    ### good
+    ## 5
+    ## 7
+    ## 8
+    ## 23 
+    ## 24 
+    ## 25
     for i, batch in enumerate(tqdm(data_loader)):
-        images, targets, image_ids = batch
+        if i != num_ind:
+            print (i, num_ind)
+            continue
+        # print (i, batch)
+        images, targets, image_ids, path = batch
+        print (path)
         images = images.to(device)
+        print (images)
+        print (images.tensors.shape)
+        # print (images.image_sizes)
+        # print (targets)
+        # print (len(targets))
+        # print (targets[0].bbox)
+        # print (targets[0].extra_fields)
+        print (image_ids)
+
+        mean = [102.9801, 115.9465, 122.7717]
+        # img_save = img_save.add_(mean[:, None, None])
+        # img_save = images_save.cpu().numpy()
+        img_save = images.tensors.cpu().numpy()
+        # img_save = img_save.view(img_save.shape(1), img_save.shape(2), img_save.shape(3))
+        img_save = img_save[0,:,:,:] # .view(img_save.shape(1), img_save.shape(2), img_save.shape(3))
+        img_save = np.transpose(img_save, (1, 2, 0))
+        print (img_save.shape)
+        img_save = img_save + mean
+        print (img_save.shape)
+        # print (img_save)
+        cv2.imwrite('attention/img.jpg', img_save)
+        # exit()
         with torch.no_grad():
             output = model(images)
             output = [o.to(cpu_device) for o in output]
+        print (output)
+        print (output[0].bbox)
+        img_pred = output[0].bbox.cpu().numpy()
+        savefile = 'attention/prediction.bin'
+
+        fid = open(savefile, 'wb')
+        img_pred.tofile(fid)
+
+        exit()
+        print (output[0].extra_fields)
+        print (len(output[0].extra_fields['scores']))
+        print (len(output[0].extra_fields['labels']))
+        # for o in output:
+        #     print (o)
+        #     exit()
+
+        ## check images visually
+        # img_show = images.tensors.cpu().numpy()
+        # cv2.imshow('abc', img_show)
+        # cv2.waitKey()
+      
         results_dict.update(
             {img_id: result for img_id, result in zip(image_ids, output)}
         )
+        if i == num_ind:
+            break
+    print (results_dict)
+    exit()
     return results_dict
 
 

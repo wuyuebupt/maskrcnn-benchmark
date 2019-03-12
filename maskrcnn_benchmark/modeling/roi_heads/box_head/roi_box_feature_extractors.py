@@ -14,6 +14,7 @@ from .attention import NONLocalBlock2D
 from .attention import NONLocalBlock2D_Group
 from .attention import ListModule
 
+import numpy as np
 
 
 @registry.ROI_BOX_FEATURE_EXTRACTORS.register("ResNet50Conv5ROIFeatureExtractorNeighbor")
@@ -175,13 +176,34 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
 
 
     def forward(self, x, proposals):
-        # print (len(x))
-        # print (x[0].shape)
-        # print (x[1].shape)
-        # print (x[2].shape)
-        # print (x[3].shape)
-        # print (x[4].shape)
+        print (len(x))
+        print (x[0].shape)
+        print (x[1].shape)
+        print (x[2].shape)
+        print (x[3].shape)
+        print (x[4].shape)
+        # print (proposals)
+        print (len(proposals))
+        print (proposals[0].extra_fields['objectness'].shape)
+        # print (proposals[0].extra_fields)
+        print (proposals[0].bbox)
+
+        proposal_save = proposals[0].bbox.cpu().numpy()
+        print (proposal_save)
+        print (proposal_save.shape)
+
+        savefile = 'attention/proposal.bin'
+
+        fid = open(savefile, 'wb')
+        proposal_save.tofile(fid)
+
+        # print (proposals[0].bbox[0:10,:])
+        # print (proposals.shape)
+
         x = self.pooler(x, proposals)
+        print (x.shape)
+        # print (x)
+        # exit()
 
         if self.nonlocal_use_shared == True:
             # print (x.shape)
