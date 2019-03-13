@@ -64,27 +64,28 @@ class _NonLocalBlockND_Cross(nn.Module):
         if self.mode_code == 0:
             # x <- x, x
             # y <- y, y
-            x_cls = self.cls_nonlocal(x_cls, x_cls) 
-            x_reg = self.reg_nonlocal(x_reg, x_reg) 
+            x_cls_out = self.cls_nonlocal(x_cls, x_cls) 
+            x_reg_out = self.reg_nonlocal(x_reg, x_reg) 
         elif self.mode_code == 1:
             # x <- x, y 
             # y <- y, y
-            x_cls = self.cls_nonlocal(x_cls, x_reg) 
-            x_reg = self.reg_nonlocal(x_reg, x_reg) 
+            x_cls_out = self.cls_nonlocal(x_cls, x_reg) 
+            x_reg_out = self.reg_nonlocal(x_reg, x_reg) 
         elif self.mode_code == 2:
             # x <- x, x
             # y <- y, x
-            x_cls = self.cls_nonlocal(x_cls, x_cls) 
-            x_reg = self.reg_nonlocal(x_reg, x_cls) 
+            x_cls_out = self.cls_nonlocal(x_cls, x_cls) 
+            x_reg_out = self.reg_nonlocal(x_reg, x_cls) 
         elif self.mode_code == 3:
             # x <- x, y
             # y <- y, x
-            x_cls = self.cls_nonlocal(x_cls, x_reg) 
-            x_reg = self.reg_nonlocal(x_reg, x_cls) 
+            x_cls_out = self.cls_nonlocal(x_cls, x_reg) 
+            x_reg_out = self.reg_nonlocal(x_reg, x_cls) 
         else:
             assert False
 
-        return x_cls, x_reg
+        return x_cls_out, x_reg_out
+        # return x_cls, x_reg
 
 
 class NONLocalBlock2D_Cross(_NonLocalBlockND_Cross):
@@ -192,6 +193,8 @@ class _NonLocalBlockND_Group(nn.Module):
             self.ffconv = nn.Sequential(
                           conv_nd(in_channels=self.in_channels, out_channels=self.in_channels, kernel_size=1, stride=1, padding=0),
                           bn(self.in_channels) )
+        nn.init.constant_(self.ffconv[0].weight, 0)
+        nn.init.constant_(self.ffconv[0].bias, 0)
         #if relu_layer or bn_layer:
         #    nn.init.constant_(self.W[1].weight, 0)
         #    nn.init.constant_(self.W[1].bias, 0)
