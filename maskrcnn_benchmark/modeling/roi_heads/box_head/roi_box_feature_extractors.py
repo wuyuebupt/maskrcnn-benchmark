@@ -12,6 +12,7 @@ from maskrcnn_benchmark.modeling.make_layers import make_fc
 
 from .attention import NONLocalBlock2D
 from .attention import NONLocalBlock2D_Group
+from .attention import NONLocalBlock2D_Cross
 from .attention import ListModule
 from maskrcnn_benchmark.layers import Conv2d
 
@@ -126,62 +127,99 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         use_gn = cfg.MODEL.ROI_BOX_HEAD.USE_GN
         self.pooler = pooler
 
+
+        ## Keep
         nonlocal_use_bn = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN
         nonlocal_use_relu = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU
         nonlocal_use_softmax = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SOFTMAX
         nonlocal_inter_channels = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_INTER_CHANNELS
 
-        self.nonlocal_use_shared = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SHARED
+
+        ## Depreciated 
+        # self.nonlocal_use_shared = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SHARED
 
         ## add conv and pool like faster rcnn
         self.avgpool = nn.AvgPool2d(kernel_size=7, stride=7)
-        out_channels = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
-        self.nonlocal_conv = nn.Sequential(
-             Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
-             nn.BatchNorm2d(out_channels),
-             nn.ReLU()
-        )
 
+
+        ## Depreciated 
+        # out_channels = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
+        # self.nonlocal_conv = nn.Sequential(
+        #      Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+        #      nn.BatchNorm2d(out_channels),
+        #      nn.ReLU()
+        # )
+        out_channels = num_inputs
+
+
+        ## call the new class, nonlocal cross
+
+        # inherent the shared num of group, for cross, group number has to be shared 
+        shared_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_GROUP
+
+        # leave it there for further use
+        self.shared_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK
+
+        shared_nonlocal = []
+        # first with a seperate self attention
+        shared_nonlocal.append(NONLocalBlock2D_Cross(out_channels, num_group=shared_num_group, 
+                                                inter_channels=nonlocal_inter_channels, sub_sample=False, 
+                                                bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, 
+                                                use_softmax=nonlocal_use_softmax, 
+                                                mode_code=0))
+        # followed by a cross attention
+        shared_nonlocal.append(NONLocalBlock2D_Cross(out_channels, num_group=shared_num_group, 
+                                                inter_channels=nonlocal_inter_channels, sub_sample=False, 
+                                                bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, 
+                                                use_softmax=nonlocal_use_softmax, 
+                                                mode_code=3))
+
+        self.nonlocal_num = 2
+
+        self.shared_nonlocal = ListModule(*shared_nonlocal)
+
+        ### 
 
         ## shared non-local
-        if self.nonlocal_use_shared == True:
-            shared_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_GROUP
-            self.shared_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK
-            shared_nonlocal = []
-            for i in range(self.shared_num_stack):
-                shared_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=shared_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
-                # shared_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=shared_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
-            self.shared_nonlocal = ListModule(*shared_nonlocal)
+        ### if self.nonlocal_use_shared == True:
+        ###     shared_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_GROUP
+        ###     self.shared_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK
 
-            # self.fc6 = make_fc(input_size, representation_size, use_gn)
-            # self.fc7 = make_fc(representation_size, representation_size, use_gn)
-        else:
-            ## seperate group non-local, before fc6 and fc7
-            cls_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_GROUP
-            self.cls_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_STACK
+        ###     shared_nonlocal = []
+        ###     for i in range(self.shared_num_stack):
+        ###         shared_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=shared_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
+        ###         # shared_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=shared_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
+        ###     self.shared_nonlocal = ListModule(*shared_nonlocal)
 
-            reg_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_GROUP
-            self.reg_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK
+        ###     # self.fc6 = make_fc(input_size, representation_size, use_gn)
+        ###     # self.fc7 = make_fc(representation_size, representation_size, use_gn)
+        ### else:
+        ###     ## seperate group non-local, before fc6 and fc7
+        ###     cls_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_GROUP
+        ###     self.cls_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_STACK
 
-            nonlocal_use_bn = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN
-            nonlocal_use_relu = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU
+        ###     reg_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_GROUP
+        ###     self.reg_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK
 
-            cls_nonlocal = []
-            for i in range(self.cls_num_stack):
-                cls_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=cls_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
-                # cls_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=cls_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
-            self.cls_nonlocal = ListModule(*cls_nonlocal)
+        ###     nonlocal_use_bn = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN
+        ###     nonlocal_use_relu = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU
 
-            reg_nonlocal = []
-            for i in range(self.reg_num_stack):
-                reg_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=reg_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
-                # reg_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=reg_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
-            self.reg_nonlocal = ListModule(*reg_nonlocal)
+        ###     cls_nonlocal = []
+        ###     for i in range(self.cls_num_stack):
+        ###         cls_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=cls_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
+        ###         # cls_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=cls_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
+        ###     self.cls_nonlocal = ListModule(*cls_nonlocal)
 
-            # self.fc6_cls = make_fc(input_size, representation_size, use_gn)
-            # self.fc7_cls = make_fc(representation_size, representation_size, use_gn)
-            # self.fc6_reg = make_fc(input_size, representation_size, use_gn)
-            # self.fc7_reg = make_fc(representation_size, representation_size, use_gn)
+        ###     reg_nonlocal = []
+        ###     for i in range(self.reg_num_stack):
+        ###         reg_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=reg_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
+        ###         # reg_nonlocal.append(NONLocalBlock2D_Group(num_inputs, num_group=reg_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
+        ###     self.reg_nonlocal = ListModule(*reg_nonlocal)
+
+        ###     # self.fc6_cls = make_fc(input_size, representation_size, use_gn)
+        ###     # self.fc7_cls = make_fc(representation_size, representation_size, use_gn)
+        ###     # self.fc6_reg = make_fc(input_size, representation_size, use_gn)
+        ###     # self.fc7_reg = make_fc(representation_size, representation_size, use_gn)
 
 
     def forward(self, x, proposals):
@@ -194,6 +232,20 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         x = self.pooler(x, proposals)
        
         # print (x.shape)
+
+        x_cls = x
+        x_reg = x
+        for i in range(self.nonlocal_num):
+            x_cls, x_reg = self.shared_nonlocal[i] (x_cls, x_reg)
+
+        x_cls = self.avgpool(x_cls)
+        x_cls = x_cls.view(x_cls.size(0), -1)
+
+        x_reg = self.avgpool(x_reg)
+        x_reg = x_reg.view(x_reg.size(0), -1)
+        return tuple((x_cls, x_reg))
+
+        exit()
         x = self.nonlocal_conv(x)
         # print (x.shape)
 

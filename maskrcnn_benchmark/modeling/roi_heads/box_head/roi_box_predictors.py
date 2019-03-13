@@ -139,7 +139,8 @@ class FPNPredictorNeighbor(nn.Module):
         super(FPNPredictorNeighbor, self).__init__()
         num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
         # representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
-        representation_size = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
+        # representation_size = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
+        representation_size = cfg.MODEL.BACKBONE.OUT_CHANNELS
 
         self.cls_score = nn.Linear(representation_size, num_classes)
         num_bbox_reg_classes = 2 if cfg.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
@@ -153,13 +154,16 @@ class FPNPredictorNeighbor(nn.Module):
         self.nonlocal_use_shared = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SHARED
 
     def forward(self, x):
-        if self.nonlocal_use_shared == True:
-            scores = self.cls_score(x)
-            bbox_deltas = self.bbox_pred(x)
-        else:
-            scores = self.cls_score(x[0])
-            bbox_deltas = self.bbox_pred(x[1])
 
+        # if self.nonlocal_use_shared == True:
+        #     scores = self.cls_score(x)
+        #     bbox_deltas = self.bbox_pred(x)
+        # else:
+        #     scores = self.cls_score(x[0])
+        #     bbox_deltas = self.bbox_pred(x[1])
+
+        scores = self.cls_score(x[0])
+        bbox_deltas = self.bbox_pred(x[1])
 
         return scores, bbox_deltas
 

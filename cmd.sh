@@ -1,6 +1,6 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
-export OUTPUT_DIR=/work/maskrcnn/iccv19/ttt/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v8/
 
 ### Resnet 50, C4
 # export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_50_C4_1x_neighbor.yaml
@@ -17,6 +17,7 @@ export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_50_FPN_1x_neighbor
 export PRETRAIN_MODEL=../../R-50.pkl
 export OUT_CHANNELS=2048
 export INTER_CHANNELS=1024
+# export INTER_CHANNELS=256
 
 ### Resnet 101, FPN
 # export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_101_FPN_1x_neighbor.yaml
@@ -42,4 +43,4 @@ python  tools/train_net.py \
 --nonlocal-use-bn True \
 --nonlocal-use-relu True \
 --nonlocal-use-softmax True \
---bbox-expand  1.2
+--bbox-expand  1.0
