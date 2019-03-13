@@ -280,10 +280,9 @@ class _NonLocalBlockND_Group(nn.Module):
                 # print (f_softmax[0,:,:])
                 # print (f_softmax.shape)
 
-            y = torch.matmul(f_div_C, g_x)
-            y = y.permute(0, 2, 1).contiguous()
-            # print (y.shape)
-            y_group.append(y)
+            yy = torch.matmul(f_div_C, g_x)
+            yy = yy.permute(0, 2, 1).contiguous()
+            y_group.append(yy)
 
         # y_out = torch.stack(y_group, dim=1)
         y_out = torch.cat(y_group, dim=1)

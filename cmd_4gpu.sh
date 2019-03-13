@@ -63,7 +63,7 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --nonlocal-shared-num-group 1 \
 --nonlocal-use-bn True \
 --nonlocal-use-relu True \
---nonlocal-use-softmax True \
+--nonlocal-use-softmax False \
 --nonlocal-use-ffconv True \
 --nonlocal-inter-channels $INTER_CHANNELS \
 --bbox-expand  1.0 \
