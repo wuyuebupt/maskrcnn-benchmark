@@ -30,7 +30,7 @@ class ListModule(nn.Module):
 ### group non local
 ### find out that it can use _NonLocalBlockND_Group by modifying the forward function 
 class _NonLocalBlockND_Cross(nn.Module):
-    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True,  mode_code=0):
+    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True,  mode_code=0):
         super(_NonLocalBlockND_Cross, self).__init__()
 
 
@@ -41,13 +41,13 @@ class _NonLocalBlockND_Cross(nn.Module):
                                               num_group=num_group,
                                               inter_channels=inter_channels,
                                               dimension=2, sub_sample=sub_sample,
-                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax)
+                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax, use_ffconv=True)
 
         self.reg_nonlocal = _NonLocalBlockND_Group(in_channels,
                                               num_group=num_group,
                                               inter_channels=inter_channels,
                                               dimension=2, sub_sample=sub_sample,
-                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax)
+                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax, use_ffconv=True)
 
     # def forward(self, x):
     def forward(self, x_cls, x_reg):
@@ -88,18 +88,18 @@ class _NonLocalBlockND_Cross(nn.Module):
 
 
 class NONLocalBlock2D_Cross(_NonLocalBlockND_Cross):
-    def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, mode_code=0):
+    def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True, mode_code=0):
         super(NONLocalBlock2D_Cross, self).__init__(in_channels,
                                               num_group=num_group,
                                               inter_channels=inter_channels,
                                               dimension=2, sub_sample=sub_sample,
-                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax, 
+                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax, use_ffconv=True, 
                                               mode_code=0)
 
 
 ### group non local
 class _NonLocalBlockND_Group(nn.Module):
-    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True):
+    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True):
         super(_NonLocalBlockND_Group, self).__init__()
 
         assert dimension in [1, 2, 3]
@@ -126,6 +126,7 @@ class _NonLocalBlockND_Group(nn.Module):
         self.relu_layer = relu_layer
 
         self.use_softmax = use_softmax
+        self.use_ffconv = use_ffconv
 
         if self.use_softmax:
             self.softmax = nn.Softmax(dim=2)
@@ -187,6 +188,10 @@ class _NonLocalBlockND_Group(nn.Module):
         nn.init.constant_(self.W[0].weight, 0)
         nn.init.constant_(self.W[0].bias, 0)
 
+        if self.use_ffconv:
+            self.ffconv = nn.Sequential(
+                          conv_nd(in_channels=self.in_channels, out_channels=self.in_channels, kernel_size=1, stride=1, padding=0),
+                          bn(self.in_channels) )
         #if relu_layer or bn_layer:
         #    nn.init.constant_(self.W[1].weight, 0)
         #    nn.init.constant_(self.W[1].bias, 0)
@@ -296,7 +301,15 @@ class _NonLocalBlockND_Group(nn.Module):
         if self.relu_layer:
             z = F.relu_(z)
 
-        return z
+        ## add one more conv
+        if self.use_ffconv:
+            ffz = self.ffconv(z)
+            zz = ffz + z
+            zz = F.relu_(zz)
+        else:
+            zz = z
+
+        return zz
 
 class NONLocalBlock2D_Group(_NonLocalBlockND_Group):
     def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True):

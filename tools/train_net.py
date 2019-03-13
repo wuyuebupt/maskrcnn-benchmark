@@ -232,6 +232,14 @@ def main():
         type=str,
     )
     parser.add_argument(
+        "--nonlocal-use-ffconv",
+        default="True",
+        help="nonlocal use ffconv after nonlocal with residual",
+        metavar="True",
+        type=str,
+    )
+
+    parser.add_argument(
         "--nonlocal-use-softmax",
         default="False",
         help="nonlocal use softmax other than div",
@@ -302,6 +310,7 @@ def main():
     print (args.nonlocal_inter_channels)
     print (args.nonlocal_out_channels)
     print (args.nonlocal_use_softmax)
+    print (args.nonlocal_use_ffconv)
     print (args.bbox_expand)
     print (args.mode_code)
     print (args.fpn_out_channels)
@@ -325,6 +334,7 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SHARED = ast.literal_eval(args.nonlocal_use_shared)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN = ast.literal_eval(args.nonlocal_use_bn)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SOFTMAX = ast.literal_eval(args.nonlocal_use_softmax)
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_FFCONV = ast.literal_eval(args.nonlocal_use_ffconv)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU = ast.literal_eval(args.nonlocal_use_relu)
 
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_MODE = args.mode_code

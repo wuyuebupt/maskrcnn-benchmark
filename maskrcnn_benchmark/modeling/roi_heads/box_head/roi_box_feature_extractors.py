@@ -132,6 +132,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         nonlocal_use_bn = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN
         nonlocal_use_relu = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU
         nonlocal_use_softmax = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SOFTMAX
+        nonlocal_use_ffconv = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_FFCONV
         nonlocal_inter_channels = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_INTER_CHANNELS
 
 
@@ -170,7 +171,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
             shared_nonlocal.append(NONLocalBlock2D_Cross(out_channels, num_group=shared_num_group, 
                                                 inter_channels=nonlocal_inter_channels, sub_sample=False, 
                                                 bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, 
-                                                use_softmax=nonlocal_use_softmax, 
+                                                use_softmax=nonlocal_use_softmax, use_ffconv=nonlocal_use_ffconv, 
                                                 mode_code=nonlocal_mode[i] ))
  
         self.shared_nonlocal = ListModule(*shared_nonlocal)
