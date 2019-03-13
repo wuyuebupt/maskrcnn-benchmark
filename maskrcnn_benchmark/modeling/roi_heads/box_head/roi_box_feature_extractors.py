@@ -173,6 +173,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
                                                 use_softmax=nonlocal_use_softmax, 
                                                 mode_code=nonlocal_mode[i] ))
  
+        self.shared_nonlocal = ListModule(*shared_nonlocal)
         # exit()
         # shared_nonlocal.append(NONLocalBlock2D_Cross(out_channels, num_group=shared_num_group, 
         #                                         inter_channels=nonlocal_inter_channels, sub_sample=False, 
@@ -188,7 +189,6 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
 
         # self.nonlocal_num = 2
 
-        self.shared_nonlocal = ListModule(*shared_nonlocal)
 
         ### 
 
@@ -244,7 +244,6 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         x = self.pooler(x, proposals)
        
         # print (x.shape)
-
         x_cls = x
         x_reg = x
         for i in range(self.nonlocal_num):
@@ -257,44 +256,45 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         x_reg = x_reg.view(x_reg.size(0), -1)
         return tuple((x_cls, x_reg))
 
-        exit()
-        x = self.nonlocal_conv(x)
-        # print (x.shape)
+        ####### old version of share and seperate
+        ## exit()
+        ## x = self.nonlocal_conv(x)
+        ## # print (x.shape)
 
-        if self.nonlocal_use_shared == True:
-            # print (x.shape)
-            for i in range(self.shared_num_stack):
-                x = self.shared_nonlocal[i](x)
-            # exit()
-            x = self.avgpool(x)
-            x = x.view(x.size(0), -1)
-            # x = x.view(x.size(0), -1)
-            # x = F.relu(self.fc6(x))
-            # x = F.relu(self.fc7(x))
-            return x
-        else:
-            x_cls = x
-            x_reg = x
-            for i in range(self.cls_num_stack):
-                x_cls = self.cls_nonlocal[i](x_cls)
-            for i in range(self.reg_num_stack):
-                x_reg = self.reg_nonlocal[i](x_reg)
-             
-            x_cls = self.avgpool(x_cls)
-            x_cls = x_cls.view(x_cls.size(0), -1)
-            x_reg = self.avgpool(x_reg)
-            x_reg = x_reg.view(x_reg.size(0), -1)
+        ## if self.nonlocal_use_shared == True:
+        ##     # print (x.shape)
+        ##     for i in range(self.shared_num_stack):
+        ##         x = self.shared_nonlocal[i](x)
+        ##     # exit()
+        ##     x = self.avgpool(x)
+        ##     x = x.view(x.size(0), -1)
+        ##     # x = x.view(x.size(0), -1)
+        ##     # x = F.relu(self.fc6(x))
+        ##     # x = F.relu(self.fc7(x))
+        ##     return x
+        ## else:
+        ##     x_cls = x
+        ##     x_reg = x
+        ##     for i in range(self.cls_num_stack):
+        ##         x_cls = self.cls_nonlocal[i](x_cls)
+        ##     for i in range(self.reg_num_stack):
+        ##         x_reg = self.reg_nonlocal[i](x_reg)
+        ##      
+        ##     x_cls = self.avgpool(x_cls)
+        ##     x_cls = x_cls.view(x_cls.size(0), -1)
+        ##     x_reg = self.avgpool(x_reg)
+        ##     x_reg = x_reg.view(x_reg.size(0), -1)
 
-            # x_cls = x_cls.view(x_cls.size(0), -1)
-            # x_cls = F.relu(self.fc6_cls(x_cls))
-            # x_cls = F.relu(self.fc7_cls(x_cls))
+        ##     # x_cls = x_cls.view(x_cls.size(0), -1)
+        ##     # x_cls = F.relu(self.fc6_cls(x_cls))
+        ##     # x_cls = F.relu(self.fc7_cls(x_cls))
 
-            # x_reg = x_reg.view(x_reg.size(0), -1)
-            # x_reg = F.relu(self.fc6_reg(x_reg))
-            # x_reg = F.relu(self.fc7_reg(x_reg))
-            return tuple((x_cls, x_reg))
+        ##     # x_reg = x_reg.view(x_reg.size(0), -1)
+        ##     # x_reg = F.relu(self.fc6_reg(x_reg))
+        ##     # x_reg = F.relu(self.fc7_reg(x_reg))
+        ##     return tuple((x_cls, x_reg))
 
-        # return x
+        ## # return x
 
 
 
