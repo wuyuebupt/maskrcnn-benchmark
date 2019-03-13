@@ -154,27 +154,39 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
 
         ## call the new class, nonlocal cross
 
-        # inherent the shared num of group, for cross, group number has to be shared 
+        ## inherent the shared num of group, for cross, group number has to be shared 
         shared_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_GROUP
 
-        # leave it there for further use
-        self.shared_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK
+        ## leave it there 
+        # self.shared_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK
 
         shared_nonlocal = []
         # first with a seperate self attention
-        shared_nonlocal.append(NONLocalBlock2D_Cross(out_channels, num_group=shared_num_group, 
-                                                inter_channels=nonlocal_inter_channels, sub_sample=False, 
-                                                bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, 
-                                                use_softmax=nonlocal_use_softmax, 
-                                                mode_code=0))
-        # followed by a cross attention
-        shared_nonlocal.append(NONLocalBlock2D_Cross(out_channels, num_group=shared_num_group, 
-                                                inter_channels=nonlocal_inter_channels, sub_sample=False, 
-                                                bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, 
-                                                use_softmax=nonlocal_use_softmax, 
-                                                mode_code=3))
 
-        self.nonlocal_num = 2
+        nonlocal_mode = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_MODE
+        self.nonlocal_num = len(nonlocal_mode)
+        print (self.nonlocal_num)
+        for i in range(self.nonlocal_num):
+            shared_nonlocal.append(NONLocalBlock2D_Cross(out_channels, num_group=shared_num_group, 
+                                                inter_channels=nonlocal_inter_channels, sub_sample=False, 
+                                                bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, 
+                                                use_softmax=nonlocal_use_softmax, 
+                                                mode_code=nonlocal_mode[i] ))
+ 
+        # exit()
+        # shared_nonlocal.append(NONLocalBlock2D_Cross(out_channels, num_group=shared_num_group, 
+        #                                         inter_channels=nonlocal_inter_channels, sub_sample=False, 
+        #                                         bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, 
+        #                                         use_softmax=nonlocal_use_softmax, 
+        #                                         mode_code=0))
+        # # followed by a cross attention
+        # shared_nonlocal.append(NONLocalBlock2D_Cross(out_channels, num_group=shared_num_group, 
+        #                                         inter_channels=nonlocal_inter_channels, sub_sample=False, 
+        #                                         bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, 
+        #                                         use_softmax=nonlocal_use_softmax, 
+        #                                         mode_code=3))
+
+        # self.nonlocal_num = 2
 
         self.shared_nonlocal = ListModule(*shared_nonlocal)
 

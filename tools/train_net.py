@@ -253,6 +253,23 @@ def main():
         type=float,
     )
 
+    parser.add_argument(
+        "--mode-code",
+        nargs = '*',
+        # default=[0, 3],
+        default=[],
+        help="model code for each avg",
+        metavar="0 3",
+        type=int,
+    )
+    parser.add_argument(
+        "--fpn-out-channels",
+        default="256",
+        help="fpn out channels, c4 < 2048, fpn < 256",
+        metavar="256",
+        type=int,
+    )
+
     args = parser.parse_args()
     print (args.config_file)
 
@@ -286,25 +303,32 @@ def main():
     print (args.nonlocal_out_channels)
     print (args.nonlocal_use_softmax)
     print (args.bbox_expand)
+    print (args.mode_code)
+    print (args.fpn_out_channels)
+
 
     cfg.DATA_DIR = args.data_dir
     cfg.OUTPUT_DIR = args.output_dir
     cfg.MODEL.WEIGHT = args.pretrained_model
     cfg.MODEL.ROI_BOX_HEAD.NEIGHBOR_EXPAND = args.bbox_expand
 
-    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_GROUP = args.nonlocal_cls_num_group
-    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_STACK = args.nonlocal_cls_num_stack
-    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_GROUP = args.nonlocal_reg_num_group
-    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK = args.nonlocal_reg_num_stack
+    # cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_GROUP = args.nonlocal_cls_num_group
+    # cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_STACK = args.nonlocal_cls_num_stack
+    # cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_GROUP = args.nonlocal_reg_num_group
+    # cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK = args.nonlocal_reg_num_stack
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_GROUP = args.nonlocal_shared_num_group
-    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK = args.nonlocal_shared_num_stack
+    # cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK = args.nonlocal_shared_num_stack
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_INTER_CHANNELS = args.nonlocal_inter_channels
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS = args.nonlocal_out_channels
+   
 
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SHARED = ast.literal_eval(args.nonlocal_use_shared)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN = ast.literal_eval(args.nonlocal_use_bn)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SOFTMAX = ast.literal_eval(args.nonlocal_use_softmax)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU = ast.literal_eval(args.nonlocal_use_relu)
+
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_MODE = args.mode_code
+    cfg.MODEL.BACKBONE.OUT_CHANNELS = args.fpn_out_channels
     cfg.freeze()
     # print (cfg)
 

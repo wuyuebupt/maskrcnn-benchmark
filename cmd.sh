@@ -15,7 +15,8 @@ export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v8/
 ### Resnet 50, FPN
 export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_50_FPN_1x_neighbor.yaml
 export PRETRAIN_MODEL=../../R-50.pkl
-export OUT_CHANNELS=2048
+# export OUT_CHANNELS=2048
+export OUT_CHANNELS=1024
 export INTER_CHANNELS=1024
 # export INTER_CHANNELS=256
 
@@ -31,16 +32,12 @@ python  tools/train_net.py \
 --pretrained-model $PRETRAIN_MODEL \
 --data-dir ../maskrcnn-benchmark-file/datasets/ \
 --config-file $CONFIG_YAML \
---nonlocal-cls-num-group 1 \
---nonlocal-cls-num-stack 1 \
---nonlocal-reg-num-group 1 \
---nonlocal-reg-num-stack 1 \
 --nonlocal-shared-num-group 1 \
---nonlocal-shared-num-stack 1 \
 --nonlocal-inter-channels $INTER_CHANNELS \
---nonlocal-out-channels $OUT_CHANNELS \
 --nonlocal-use-shared True \
 --nonlocal-use-bn True \
 --nonlocal-use-relu True \
 --nonlocal-use-softmax True \
---bbox-expand  1.0
+--bbox-expand  1.0 \
+--fpn-out-channels $OUT_CHANNELS \
+--mode-code 0 3 
