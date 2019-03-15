@@ -327,6 +327,7 @@ def main():
     cfg.MODEL.BACKBONE.OUT_CHANNELS = args.fpn_out_channels
     cfg.freeze()
     # print (cfg)
+    # exit()
 
     output_dir = cfg.OUTPUT_DIR
     # print (output_dir)

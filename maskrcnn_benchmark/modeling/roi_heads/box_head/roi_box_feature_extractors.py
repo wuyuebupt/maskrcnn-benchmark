@@ -138,11 +138,11 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         out_channels = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
 
         ## depreciate
-        self.nonlocal_conv = nn.Sequential(
-             Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
-             nn.BatchNorm2d(out_channels),
-             nn.ReLU()
-        )
+        # self.nonlocal_conv = nn.Sequential(
+        #      Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+        #      nn.BatchNorm2d(out_channels),
+        #      nn.ReLU()
+        # )
 
 
         ## shared non-local
@@ -180,7 +180,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         x = self.pooler(x, proposals)
 
 
-        x =  self.nonlocal_conv(x)
+        # x =  self.nonlocal_conv(x)
         ## shared
         for i in range(self.shared_num_stack):
             x = self.shared_nonlocal[i](x)
