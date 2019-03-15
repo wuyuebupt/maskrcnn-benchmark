@@ -188,7 +188,7 @@ class NONLocalBlock2D_Group(_NonLocalBlockND_Group):
                                               num_group=num_group,
                                               inter_channels=inter_channels,
                                               dimension=2, sub_sample=sub_sample,
-                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax, use_ffconv=True)
+                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax, use_ffconv=use_ffconv)
 
 
 ## original non local

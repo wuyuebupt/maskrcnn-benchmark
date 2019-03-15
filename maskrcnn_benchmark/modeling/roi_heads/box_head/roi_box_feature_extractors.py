@@ -134,15 +134,15 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
 
         ## add conv and pool like faster rcnn
         self.avgpool = nn.AvgPool2d(kernel_size=7, stride=7)
-        out_channels = num_inputs
-        # out_channels = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
+        # out_channels = num_inputs
+        out_channels = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
 
         ## depreciate
-        # self.nonlocal_conv = nn.Sequential(
-        #      Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
-        #      nn.BatchNorm2d(out_channels),
-        #      nn.ReLU()
-        # )
+        self.nonlocal_conv = nn.Sequential(
+             Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+             nn.BatchNorm2d(out_channels),
+             nn.ReLU()
+        )
 
 
         ## shared non-local
@@ -151,7 +151,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         self.shared_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK
         shared_nonlocal = []
         for i in range(self.shared_num_stack):
-            shared_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=shared_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
+            shared_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=shared_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax, use_ffconv=nonlocal_use_ffconv))
         self.shared_nonlocal = ListModule(*shared_nonlocal)
 
 
@@ -167,18 +167,20 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
 
         cls_nonlocal = []
         for i in range(self.cls_num_stack):
-            cls_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=cls_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
+            cls_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=cls_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax, use_ffconv=nonlocal_use_ffconv))
         self.cls_nonlocal = ListModule(*cls_nonlocal)
 
         reg_nonlocal = []
         for i in range(self.reg_num_stack):
-            reg_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=reg_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax))
+            reg_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=reg_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax, use_ffconv=nonlocal_use_ffconv))
         self.reg_nonlocal = ListModule(*reg_nonlocal)
 
 
     def forward(self, x, proposals):
         x = self.pooler(x, proposals)
-       
+
+
+        x =  self.nonlocal_conv(x)
         ## shared
         for i in range(self.shared_num_stack):
             x = self.shared_nonlocal[i](x)
