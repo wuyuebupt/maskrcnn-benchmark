@@ -27,7 +27,7 @@ class ListModule(nn.Module):
 
 ### group non local
 class _NonLocalBlockND_Group(nn.Module):
-    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True):
+    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True):
         super(_NonLocalBlockND_Group, self).__init__()
 
         assert dimension in [1, 2, 3]
@@ -50,10 +50,13 @@ class _NonLocalBlockND_Group(nn.Module):
         conv_nd = nn.Conv2d
         max_pool_layer = nn.MaxPool2d(kernel_size=(2, 2))
         bn = nn.BatchNorm2d
-        relu = nn.ReLU
+
         self.relu_layer = relu_layer
+        self.relu = nn.ReLU(inplace=True)
 
         self.use_softmax = use_softmax
+
+        self.use_ffconv = use_ffconv
 
         if self.use_softmax:
             self.softmax = nn.Softmax(dim=2)
@@ -64,30 +67,14 @@ class _NonLocalBlockND_Group(nn.Module):
         self.inter_channels_group = self.inter_channels // self.num_group
         print (self.inter_channels_group)
 
-        g = []
-        theta = []
-        phi = []
-        for i in range(self.num_group):
-            g.append(conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels_group,
-                    kernel_size=1, stride=1, padding=0))
-            theta.append(conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels_group,
-                    kernel_size=1, stride=1, padding=0))
-            phi.append(conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels_group,
-                    kernel_size=1, stride=1, padding=0))
+        self.g = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
+                         kernel_size=1, stride=1, padding=0)
 
-        self.g = ListModule(*g)
-        self.theta = ListModule(*theta)
-        self.phi = ListModule(*phi)
+        self.theta = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
+                             kernel_size=1, stride=1, padding=0)
 
-        print (self.g)
-        # self.g = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
-        #                  kernel_size=1, stride=1, padding=0)
-
-        # self.theta = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
-        #                      kernel_size=1, stride=1, padding=0)
-
-        # self.phi = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
-        #                    kernel_size=1, stride=1, padding=0)
+        self.phi = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
+                           kernel_size=1, stride=1, padding=0)
 
         assert sub_sample==False
         if sub_sample:
@@ -105,54 +92,21 @@ class _NonLocalBlockND_Group(nn.Module):
                 'bn', bn(self.in_channels)
             )
 
-        # if relu_layer:
-        #     self.W.add_module( 
-        #         'relu', relu(inplace=True)
-        #     )
         print (self.W)
 
         ## init the weights
         nn.init.constant_(self.W[0].weight, 0)
         nn.init.constant_(self.W[0].bias, 0)
 
-        #if relu_layer or bn_layer:
-        #    nn.init.constant_(self.W[1].weight, 0)
-        #    nn.init.constant_(self.W[1].bias, 0)
-        #else:
-        #    nn.init.constant_(self.W.weight, 0)
-        #    nn.init.constant_(self.W.bias, 0)
-        
-        ## v1
-        # if bn_layer & relu_layer:
-        #     self.W = nn.Sequential(
-        #         conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
-        #                 kernel_size=1, stride=1, padding=0),
-        #         relu(inplace=True), 
-        #         bn(self.in_channels)
-        #     )
-        #     nn.init.constant_(self.W[1].weight, 0)
-        #     nn.init.constant_(self.W[1].bias, 0)
-        # elif bn_layer & not relu_layer:
-        #     self.W = nn.Sequential(
-        #         conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
-        #                 kernel_size=1, stride=1, padding=0),
-        #         bn(self.in_channels)
-        #     )
-        #     nn.init.constant_(self.W[1].weight, 0)
-        #     nn.init.constant_(self.W[1].bias, 0)
-        #  elif not bn_layer & relu_layer:
-        #     self.W = nn.Sequential(
-        #         conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
-        #                 kernel_size=1, stride=1, padding=0),
-        #         relu(inplace=True)
-        #     )
-        #     nn.init.constant_(self.W[1].weight, 0)
-        #     nn.init.constant_(self.W[1].bias, 0)
-        # else:
-        #     self.W = conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
-        #                      kernel_size=1, stride=1, padding=0)
-        #     nn.init.constant_(self.W.weight, 0)
-        #     nn.init.constant_(self.W.bias, 0)
+
+        if self.use_ffconv:
+            self.ffconv = nn.Sequential(
+                          conv_nd(in_channels=self.in_channels, out_channels=self.in_channels, kernel_size=1, stride=1, padding=0),
+                          bn(self.in_channels) )
+
+            nn.init.constant_(self.ffconv[0].weight, 0)
+            nn.init.constant_(self.ffconv[0].bias, 0)
+
 
 
     def forward(self, x):
@@ -164,71 +118,77 @@ class _NonLocalBlockND_Group(nn.Module):
         batch_size = x.size(0)
         # print (batch_size)
 
-        y_group = []
-        for i in range(self.num_group):
-            
-            g_x = self.g[i](x).view(batch_size, self.inter_channels_group, -1)
-            ## relu
-            # g_x = F.relu_(g_x) 
-            g_x = g_x.permute(0, 2, 1)
 
-            theta_x = self.theta[i](x).view(batch_size, self.inter_channels_group, -1)
-            theta_x = theta_x.permute(0, 2, 1)
-            phi_x = self.phi[i](x).view(batch_size, self.inter_channels_group, -1)
+        ## from yiche
+        ## input x
+        g_x = self.g(x).view(batch_size, self.inter_channels, -1)
+        g_x = g_x.permute(0, 2, 1)
+        ## input x
+        theta_x = self.theta(x).view(batch_size, self.inter_channels, -1)
+        theta_x = theta_x.permute(0, 2, 1)
+        ## input x
+        phi_x = self.phi(x).view(batch_size, self.inter_channels, -1)
+
+        if self.num_group == 1:
             f = torch.matmul(theta_x, phi_x)
 
             if self.use_softmax == True:
-                # f_div_C = F.softmax(f, 1, _stacklevel=4)
                 f_div_C = self.softmax(f)
-                # print (f_div_C.shape)
-                # print (f[0,0,:])
-                # print (f_div_C[0,0,:])
-                # print (torch.sum(f_div_C[0,0,:]))
-
-                # exit()
             else:
                 N = f.size(-1)
-                # print (f.shape)
                 f_div_C = f / N
-                # print (N)
-                # print (f_div_C.shape)
-                # exit()
 
-                # print (f_div_C[0,:,:])
-                # print (f[0,:,:])
-                # print (f_softmax[0,:,:])
-                # print (f_softmax.shape)
+            yy = torch.matmul(f_div_C, g_x)
+            yy = yy.permute(0, 2, 1).contiguous()
 
-            y = torch.matmul(f_div_C, g_x)
-            y = y.permute(0, 2, 1).contiguous()
-            # print (y.shape)
-            y_group.append(y)
+            yy = yy.view(batch_size, self.inter_channels, *x.size()[2:])
+            W_y = self.W(yy)
+        else:    
+            g_xs = torch.split(g_x, self.inter_channels, dim=2)
+            theta_xs = torch.split(theta_x, self.inter_channels, dim=2) 
+            phi_xs = torch.split(phi_x, self.inter_channels, dim=1)
+            y_group = []
+            for gx, tx, px in zip(g_xs, theta_xs, phi_xs):
+                f = torch.matmul(tx, px)
 
-        # y_out = torch.stack(y_group, dim=1)
-        y_out = torch.cat(y_group, dim=1)
-        # print (y_out.shape)
-        # all_features = torch.stack(features)
+                if self.use_softmax == True:
+                    f_div_C = self.softmax(f)
+                else:
+                    N = f.size(-1)
+                    f_div_C = f / N
 
+                yy = torch.matmul(f_div_C, gx)
+                yy = yy.permute(0, 2, 1).contiguous()
+                y_group.append(yy)
 
-        # y = y.view(batch_size, self.inter_channels, *x.size()[2:])
-        # W_y = self.W(y)
-        y_out = y_out.view(batch_size, self.inter_channels, *x.size()[2:])
-        W_y = self.W(y_out)
+            y_out = torch.cat(y_group, dim=1)
+            y_out = y_out.view(batch_size, self.inter_channels, *x.size()[2:])
+            W_y = self.W(y_out)
+
         z = W_y + x
 
         ## relu after residual
         if self.relu_layer:
-            z = F.relu_(z)
+            z = self.relu(z)
 
-        return z
+        ## add one more conv
+        if self.use_ffconv:
+            ffz = self.ffconv(z)
+            zz = ffz + z
+            zz = self.relu(zz)
+        else:
+            zz = z
+
+        return zz
+
 
 class NONLocalBlock2D_Group(_NonLocalBlockND_Group):
-    def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True):
+    def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True):
         super(NONLocalBlock2D_Group, self).__init__(in_channels,
                                               num_group=num_group,
                                               inter_channels=inter_channels,
                                               dimension=2, sub_sample=sub_sample,
-                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax)
+                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax, use_ffconv=True)
 
 
 ## original non local

@@ -1,7 +1,7 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
 export NGPUS=4
-export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v7/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v10/
 
 ### for images/gpu = 1
 ### Resnet 50, C4
@@ -42,8 +42,8 @@ export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v7/
 ### Resnet 50, FPN
 export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_50_FPN_1x_neighbor_bs8.yaml
 export PRETRAIN_MODEL=../../R-50.pkl
-export OUT_CHANNELS=2048
-export INTER_CHANNELS=1024
+export OUT_CHANNELS=512
+export INTER_CHANNELS=512
 
 ### Resnet 101, FPN
 # export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_101_FPN_1x_neighbor_bs8.yaml
@@ -58,18 +58,18 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --data-dir ../maskrcnn-benchmark-file/datasets/ \
 --config-file $CONFIG_YAML \
 --nonlocal-cls-num-group 2 \
---nonlocal-cls-num-stack 3 \
+--nonlocal-cls-num-stack 1 \
 --nonlocal-reg-num-group 2 \
---nonlocal-reg-num-stack 3 \
---nonlocal-shared-num-group 1 \
+--nonlocal-reg-num-stack 1 \
+--nonlocal-shared-num-group 2 \
 --nonlocal-shared-num-stack 1 \
---nonlocal-use-shared True \
 --nonlocal-use-bn True \
 --nonlocal-use-relu True \
---nonlocal-use-softmax True \
+--nonlocal-use-softmax False \
+--nonlocal-use-ffconv True \
 --nonlocal-inter-channels $INTER_CHANNELS \
---nonlocal-out-channels $OUT_CHANNELS \
 --bbox-expand  1.2
+--fpn-out-channels $OUT_CHANNELS
 
 
 
