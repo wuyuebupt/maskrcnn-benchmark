@@ -144,9 +144,13 @@ class _NonLocalBlockND_Group(nn.Module):
             yy = yy.view(batch_size, self.inter_channels, *x.size()[2:])
             W_y = self.W(yy)
         else:    
-            g_xs = torch.split(g_x, self.inter_channels, dim=2)
-            theta_xs = torch.split(theta_x, self.inter_channels, dim=2) 
-            phi_xs = torch.split(phi_x, self.inter_channels, dim=1)
+            g_xs = torch.split(g_x, self.inter_channels_group, dim=2)
+            theta_xs = torch.split(theta_x, self.inter_channels_group, dim=2) 
+            phi_xs = torch.split(phi_x, self.inter_channels_group, dim=1)
+            # print (len(phi_xs)) #  = torch.split(phi_x, self.inter_channels, dim=1)
+            # print (theta_xs.shape) #  = torch.split(phi_x, self.inter_channels, dim=1)
+            #print (g.shape) #  = torch.split(phi_x, self.inter_channels, dim=1)
+            # exit()
             y_group = []
             for gx, tx, px in zip(g_xs, theta_xs, phi_xs):
                 f = torch.matmul(tx, px)
