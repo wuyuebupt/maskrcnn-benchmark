@@ -25,6 +25,47 @@ class ListModule(nn.Module):
     def __len__(self):
         return len(self._modules)
 
+
+
+class FPNFFConv(nn.Module):
+    def __init__(self, in_channels):
+        super(FPNFFConv, self).__init__()
+
+        inter_channels = in_channels // 4
+        out_channels = in_channels
+
+        self.relu = nn.ReLU(inplace=True)
+        ## top
+        self.conv1_ = nn.Conv2d(in_channels, inter_channels, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn1_ = nn.BatchNorm2d(inter_channels)
+        ## bottom
+        self.conv2_ = nn.Conv2d(inter_channels, inter_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2_ = nn.BatchNorm2d(inter_channels)
+
+        self.conv3_ = nn.Conv2d(inter_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn3_ = nn.BatchNorm2d(out_channels)
+
+        # Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+        # nn.BatchNorm2d(out_channels)
+
+    def forward(self, x):
+        identity = x
+        ## bottom
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+        out = self.conv3(out)
+        out = self.bn3(out)
+        ## residual
+        out = out + identity
+        out = self.relu(out)
+
+        return out
+
+
 ### group non local
 class _NonLocalBlockND_Group(nn.Module):
     def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True):
@@ -100,12 +141,14 @@ class _NonLocalBlockND_Group(nn.Module):
 
 
         if self.use_ffconv:
-            self.ffconv = nn.Sequential(
-                          conv_nd(in_channels=self.in_channels, out_channels=self.in_channels, kernel_size=1, stride=1, padding=0),
-                          bn(self.in_channels) )
+            self.ffconv = FPNFFConv(self.in_channels)
 
-            nn.init.constant_(self.ffconv[0].weight, 0)
-            nn.init.constant_(self.ffconv[0].bias, 0)
+            #               nn.Sequential(
+            #               conv_nd(in_channels=self.in_channels, out_channels=self.in_channels, kernel_size=1, stride=1, padding=0),
+            #               bn(self.in_channels) )
+
+            # nn.init.constant_(self.ffconv[0].weight, 0)
+            # nn.init.constant_(self.ffconv[0].bias, 0)
 
 
 
@@ -177,9 +220,10 @@ class _NonLocalBlockND_Group(nn.Module):
 
         ## add one more conv
         if self.use_ffconv:
-            ffz = self.ffconv(z)
-            zz = ffz + z
-            zz = self.relu(zz)
+            # ffz = self.ffconv(z)
+            # zz = ffz + z
+            # zz = self.relu(zz)
+            zz = self.ffconv(z)
         else:
             zz = z
 

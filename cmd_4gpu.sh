@@ -42,8 +42,8 @@ export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v10/
 ### Resnet 50, FPN
 export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_50_FPN_1x_neighbor_bs8.yaml
 export PRETRAIN_MODEL=../../R-50.pkl
-export FPN_OUT_CHANNELS=2048
-export NONLOCAL_OUT_CHANNELS=$FPN_OUT_CHANNELS
+export FPN_OUT_CHANNELS=256
+export NONLOCAL_OUT_CHANNELS=2048
 export INTER_CHANNELS=512
 
 ### Resnet 101, FPN

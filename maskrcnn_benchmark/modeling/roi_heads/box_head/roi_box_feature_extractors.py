@@ -91,6 +91,87 @@ class ResNet50Conv5ROIFeatureExtractor(nn.Module):
         x = self.head(x)
         return x
 
+class FPNUpChannels(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(FPNUpChannels, self).__init__()
+
+        self.relu = nn.ReLU(inplace=True)
+        ## top
+        self.conv1_ = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn1_ = nn.BatchNorm2d(out_channels)
+        ## bottom
+        self.conv2_ = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2_ = nn.BatchNorm2d(in_channels)
+
+        self.conv3_ = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn3_ = nn.BatchNorm2d(out_channels)
+
+        # Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+        # nn.BatchNorm2d(out_channels)
+
+    def forward(self, x):
+        ## top
+        out = self.conv1_(x)
+        out = self.bn1_(out)
+        ## bottom
+        out0 = self.conv2_(x)
+        out0 = self.bn2_(out0)
+        out0 = self.relu(out0)
+        out0 = self.conv3_(out0)
+        out0 = self.bn3_(out0)
+        ## residual
+        out1 = out + out0
+        out1 = self.relu(out1)
+
+        return out1
+
+
+# class FPNFFConv(nn.Module):
+#     def __init__(self, in_channels):
+#         super(FPNFFConv, self).__init()
+# 
+#         inter_channels = in_channels // 4
+#         out_channels = in_channels
+# 
+#         self.relu = nn.ReLU(inplace=True)
+#         ## top
+#         self.conv1 = Conv2d(in_channels, inter_channels, kernel_size=1, stride=1, padding=0, bias=False)
+#         self.bn1 = nn.BatchNorm2d(inter_channels)
+#         ## bottom
+#         self.conv2 = Conv2d(inter_channels, inter_channels, kernel_size=3, stride=1, padding=1, bias=False)
+#         self.bn2 = nn.BatchNorm2d(inter_channels)
+# 
+#         self.conv3 = Conv2d(inter_channels, out_channels, kernel_size=1, stride=1, padding=1, bias=False)
+#         self.bn3 = nn.BatchNorm2d(out_channels)
+# 
+#         # Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+#         # nn.BatchNorm2d(out_channels)
+# 
+#     def forward(self, x):
+#         identity = x
+#         ## bottom
+#         out = self.conv1(x)
+#         out = self.bn1(out)
+#         out = self.relu(out)
+#         out = self.conv2(out)
+#         out = self.bn2(out)
+#         out = self.relu(out)
+#         out = self.conv3(out)
+#         out = self.bn3(out)
+#         ## residual
+#         out = out + identity
+#         out = self.relu(out)
+# 
+#         return out
+# 
+
+
+
+
+
+
+
+
 
 @registry.ROI_BOX_FEATURE_EXTRACTORS.register("FPN2MLPFeatureExtractorNeighbor")
 class FPN2MLPFeatureExtractorNeighbor(nn.Module):
@@ -143,7 +224,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         #      nn.BatchNorm2d(out_channels),
         #      nn.ReLU()
         # )
-
+        self.nonlocal_conv = FPNUpChannels(num_inputs, out_channels)
 
         ## shared non-local
         # if self.nonlocal_use_shared == True:
@@ -180,7 +261,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         x = self.pooler(x, proposals)
 
 
-        # x =  self.nonlocal_conv(x)
+        x =  self.nonlocal_conv(x)
         ## shared
         for i in range(self.shared_num_stack):
             x = self.shared_nonlocal[i](x)
