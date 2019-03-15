@@ -36,14 +36,16 @@ class FPNFFConv(nn.Module):
 
         self.relu = nn.ReLU(inplace=True)
         ## top
-        self.conv1_ = nn.Conv2d(in_channels, inter_channels, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn1_ = nn.BatchNorm2d(inter_channels)
-        ## bottom
-        self.conv2_ = nn.Conv2d(inter_channels, inter_channels, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn2_ = nn.BatchNorm2d(inter_channels)
-
-        self.conv3_ = nn.Conv2d(inter_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn3_ = nn.BatchNorm2d(out_channels)
+        self.bottleneck = nn.Sequential(
+                             nn.Conv2d(in_channels, inter_channels, kernel_size=1, stride=1, padding=0, bias=False),
+                             nn.BatchNorm2d(inter_channels),
+                             nn.ReLU(inplace=True),
+                             nn.Conv2d(inter_channels, inter_channels, kernel_size=3, stride=1, padding=1, bias=False),
+                             nn.BatchNorm2d(inter_channels),
+                             nn.ReLU(inplace=True),
+                             nn.Conv2d(inter_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False),
+                             nn.BatchNorm2d(out_channels)
+          )
 
         # Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
         # nn.BatchNorm2d(out_channels)
@@ -51,19 +53,12 @@ class FPNFFConv(nn.Module):
     def forward(self, x):
         identity = x
         ## bottom
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-        out = self.conv2(out)
-        out = self.bn2(out)
-        out = self.relu(out)
-        out = self.conv3(out)
-        out = self.bn3(out)
+        out = self.bottleneck(x)
         ## residual
-        out = out + identity
-        out = self.relu(out)
+        out1 = out + identity
+        out1 = self.relu(out1)
 
-        return out
+        return out1
 
 
 ### group non local

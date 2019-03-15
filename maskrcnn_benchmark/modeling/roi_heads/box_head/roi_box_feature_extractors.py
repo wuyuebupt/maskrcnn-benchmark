@@ -97,28 +97,27 @@ class FPNUpChannels(nn.Module):
 
         self.relu = nn.ReLU(inplace=True)
         ## top
-        self.conv1_ = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn1_ = nn.BatchNorm2d(out_channels)
+        self.top = nn.Sequential(
+                     nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False),
+                     nn.BatchNorm2d(out_channels),
+                   )
         ## bottom
-        self.conv2_ = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn2_ = nn.BatchNorm2d(in_channels)
-
-        self.conv3_ = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn3_ = nn.BatchNorm2d(out_channels)
+        self.bottom = nn.Sequential(
+                        nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=False),
+                        nn.BatchNorm2d(in_channels),
+                        nn.ReLU(inplace=True),
+                        nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False),
+                        nn.BatchNorm2d(out_channels)
+                      )
 
         # Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
         # nn.BatchNorm2d(out_channels)
 
     def forward(self, x):
         ## top
-        out = self.conv1_(x)
-        out = self.bn1_(out)
+        out = self.top(x)
+        out0 = self.bottom(x)
         ## bottom
-        out0 = self.conv2_(x)
-        out0 = self.bn2_(out0)
-        out0 = self.relu(out0)
-        out0 = self.conv3_(out0)
-        out0 = self.bn3_(out0)
         ## residual
         out1 = out + out0
         out1 = self.relu(out1)
