@@ -203,13 +203,6 @@ def main():
         metavar="1",
         type=int,
     )
-    parser.add_argument(
-        "--fpn-out-channels",
-        default="256",
-        help="fpn out channels for fpn, fpn=2048(like c4)",
-        metavar="256",
-        type=int,
-    )
 
     parser.add_argument(
         "--nonlocal-out-channels",
@@ -267,6 +260,13 @@ def main():
         metavar="1.0",
         type=float,
     )
+    parser.add_argument(
+        "--backbone-out-channels",
+        default="256",
+        help="fpn out channels for fpn, fpn=2048(like c4)",
+        metavar="256",
+        type=int,
+    )
 
     args = parser.parse_args()
     print (args.config_file)
@@ -302,7 +302,7 @@ def main():
     print (args.nonlocal_use_softmax)
     print (args.nonlocal_use_ffconv)
     print (args.bbox_expand)
-    print (args.fpn_out_channels)
+    print (args.backbone_out_channels)
 
     cfg.DATA_DIR = args.data_dir
     cfg.OUTPUT_DIR = args.output_dir
@@ -324,7 +324,7 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_FFCONV = ast.literal_eval(args.nonlocal_use_ffconv)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU = ast.literal_eval(args.nonlocal_use_relu)
 
-    cfg.MODEL.BACKBONE.OUT_CHANNELS = args.fpn_out_channels
+    cfg.MODEL.BACKBONE.OUT_CHANNELS = args.backbone_out_channels
     cfg.freeze()
     # print (cfg)
     # exit()

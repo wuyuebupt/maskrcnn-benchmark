@@ -7,6 +7,7 @@ MODEL:
     POST_NMS_TOP_N_TEST: 1000
   ROI_BOX_HEAD:
     FEATURE_EXTRACTOR: "ResNet50Conv5ROIFeatureExtractorNeighbor"
+    # FEATURE_EXTRACTOR: "ResNet50Conv5ROIFeatureExtractorNeighbor"
     # NEIGHBOR_EXPAND: 1.2
     # ROI_EXPAND: True
 DATASETS:
