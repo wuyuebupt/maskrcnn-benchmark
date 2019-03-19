@@ -84,14 +84,24 @@ class ROIBoxHead(torch.nn.Module):
             ## get 
             class_logits_combine[idx_in_level_01]   = class_logits_fc[idx_in_level_01]
             box_regression_combine[idx_in_level_01] = box_regression_fc[idx_in_level_01]
-            class_logits_combine[idx_in_level_23]   = class_logits_fc[idx_in_level_23]
-            box_regression_combine[idx_in_level_23] = box_regression_fc[idx_in_level_23]
+            class_logits_combine[idx_in_level_23]   = class_logits[idx_in_level_23]
+            box_regression_combine[idx_in_level_23] = box_regression[idx_in_level_23]
+            # class_logits_combine[idx_in_level_01]   = class_logits[idx_in_level_01]
+            # box_regression_combine[idx_in_level_01] = box_regression[idx_in_level_01]
+            # class_logits_combine[idx_in_level_23]   = class_logits_fc[idx_in_level_23]
+            # box_regression_combine[idx_in_level_23] = box_regression_fc[idx_in_level_23]
 
             # result = self.post_processor((class_logits, box_regression), proposals)
             # result_fc = self.post_processor((class_logits_fc, box_regression_fc), proposals)
             # print (result)
             # print (result_fc)
             # exit()
+
+            ## results from conv
+            # result = self.post_processor((class_logits, box_regression), proposals)
+            ## results from fc
+            # result = self.post_processor((class_logits_fc, box_regression_fc), proposals)
+            ## results from conv + fc
             result = self.post_processor((class_logits_combine, box_regression_combine), proposals)
             # print (result)
             # exit()
