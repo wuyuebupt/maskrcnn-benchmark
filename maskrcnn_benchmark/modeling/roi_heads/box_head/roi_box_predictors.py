@@ -112,18 +112,26 @@ class FPNPredictorNeighbor(nn.Module):
         for l in [self.cls_score, self.bbox_pred]:
             nn.init.constant_(l.bias, 0)
 
-        # self.nonlocal_use_shared = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SHARED
+        ## fc layer
+        representation_size_fc = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
+        self.cls_score_fc = nn.Linear(representation_size_fc, num_classes)
+        self.bbox_pred_fc = nn.Linear(representation_size_fc, num_bbox_reg_classes * 4)
+
+        nn.init.normal_(self.cls_score_fc.weight, std=0.01)
+        nn.init.normal_(self.bbox_pred_fc.weight, std=0.001)
+        for l in [self.cls_score_fc, self.bbox_pred_fc]:
+            nn.init.constant_(l.bias, 0)
 
     def forward(self, x):
-        # if self.nonlocal_use_shared == True:
-        #     scores = self.cls_score(x)
-        #     bbox_deltas = self.bbox_pred(x)
-        # else:
         scores = self.cls_score(x[0])
         bbox_deltas = self.bbox_pred(x[1])
 
+        scores_fc = self.cls_score_fc(x[2])
+        bbox_deltas_fc = self.bbox_pred_fc(x[2])
 
-        return scores, bbox_deltas
+        return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[3]
+
+
 
 @registry.ROI_BOX_PREDICTOR.register("FPNPredictor")
 class FPNPredictor(nn.Module):

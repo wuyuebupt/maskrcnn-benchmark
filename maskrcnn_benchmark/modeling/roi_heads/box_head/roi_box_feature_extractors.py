@@ -256,10 +256,15 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         self.reg_nonlocal = ListModule(*reg_nonlocal)
 
 
+        ## mlp 
+        self.fc6 = make_fc(input_size, representation_size, use_gn)
+        self.fc7 = make_fc(representation_size, representation_size, use_gn)
+
     def forward(self, x, proposals):
-        x = self.pooler(x, proposals)
+        x, levels = self.pooler(x, proposals)
 
-
+        identity = x
+        ### model Y
         x =  self.nonlocal_conv(x)
         ## shared
         for i in range(self.shared_num_stack):
@@ -278,7 +283,13 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         x_reg = self.avgpool(x_reg)
         x_reg = x_reg.view(x_reg.size(0), -1)
 
-        return tuple((x_cls, x_reg))
+        ### MLP
+        identity = identity.view(identity.size(0), -1)
+
+        identity = F.relu(self.fc6(identity))
+        identity = F.relu(self.fc7(identity))
+
+        return tuple((x_cls, x_reg, identity, levels))
 
 
 
