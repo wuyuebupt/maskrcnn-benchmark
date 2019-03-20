@@ -221,8 +221,8 @@ class FastRCNNLossComputation(object):
         # box_loss = box_loss * 0.5
         # return classification_loss, box_loss
 
-        classification_loss_mask_ = classification_loss_mask_ * 0.5
-        box_loss = box_loss * 0.5
+        # classification_loss_mask_ = classification_loss_mask_ * 0.5
+        # box_loss = box_loss * 0.5
 
         return classification_loss_mask_, box_loss
 
