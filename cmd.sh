@@ -1,6 +1,6 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
-export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v11/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v12/
 
 ### Resnet 50, C4
 # export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_50_C4_1x_neighbor.yaml
@@ -45,5 +45,16 @@ python  tools/train_net.py \
 --nonlocal-use-relu True \
 --nonlocal-use-softmax False \
 --nonlocal-use-ffconv False \
---bbox-expand  1.0 \
---backbone-out-channels $OUT_CHANNELS
+--conv-bbox-expand  1.2 \
+--fc-bbox-expand  1.0 \
+--backbone-out-channels $OUT_CHANNELS \
+--maplevel-fc 0 160 320 100000 100000 \
+--maplevel-conv 0 0 160 320 100000 \
+--conv-fc-threshold 224
+
+
+
+
+
+# --maplevel-fc 0 112 224 448 100000 \
+# --maplevel-conv 0 0 160 320 100000

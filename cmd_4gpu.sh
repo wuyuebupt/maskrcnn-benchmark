@@ -1,7 +1,7 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
 export NGPUS=4
-export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v11/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v12/
 
 ### for images/gpu = 1
 ### Resnet 50, C4
@@ -74,10 +74,9 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --nonlocal-use-ffconv True \
 --nonlocal-inter-channels $INTER_CHANNELS \
 --nonlocal-out-channels $NONLOCAL_OUT_CHANNELS \
---bbox-expand  1.2 \
---backbone-out-channels $OUT_CHANNELS
-
-
-
-# python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py --config-file configs/e2e_faster_rcnn_R_50_C4_1x_4gpu.yaml --output-dir /work/ --pretrained-model ../../R-50.pkl --data-dir ../maskrcnn-benchmark-file/datasets/ --nonlocal-num-group 2 --nonlocal-num-stack 1 --bbox-expand  1.2
-
+--conv-bbox-expand  1.2 \
+--fc-bbox-expand  1.0 \
+--backbone-out-channels $OUT_CHANNELS \
+--maplevel-fc 0 160 320 100000 100000 \
+--maplevel-conv 0 0 160 320 100000 \
+--conv-fc-threshold 224

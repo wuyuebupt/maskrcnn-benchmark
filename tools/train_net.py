@@ -254,9 +254,16 @@ def main():
         type=str,
     )
     parser.add_argument(
-        "--bbox-expand",
+        "--conv-bbox-expand",
         default="1.0",
-        help="nonlocal num stack",
+        help="box expand conv",
+        metavar="1.0",
+        type=float,
+    )
+    parser.add_argument(
+        "--fc-bbox-expand",
+        default="1.0",
+        help="box expand fc",
         metavar="1.0",
         type=float,
     )
@@ -268,6 +275,31 @@ def main():
         type=int,
     )
 
+    parser.add_argument(
+        "--maplevel-fc",
+        nargs = '*',
+        # default=[0, 3],
+        default=[],
+        help="model code for each avg",
+        metavar="0 28 56 112 10000",
+        type=int,
+    )
+    parser.add_argument(
+        "--maplevel-conv",
+        nargs = '*',
+        # default=[0, 3],
+        default=[],
+        help="model code for each avg",
+        metavar="0 28 56 112 10000",
+        type=int,
+    )
+    parser.add_argument(
+        "--conv-fc-threshold",
+        default="224",
+        help="sqrt(wh) for conv and fc",
+        metavar="224",
+        type=int,
+    )
     args = parser.parse_args()
     print (args.config_file)
 
@@ -301,13 +333,21 @@ def main():
     print (args.nonlocal_out_channels)
     print (args.nonlocal_use_softmax)
     print (args.nonlocal_use_ffconv)
-    print (args.bbox_expand)
+    print (args.conv_bbox_expand)
+    print (args.fc_bbox_expand)
     print (args.backbone_out_channels)
+    ## for map level
+    print (args.maplevel_fc)
+    print (args.maplevel_conv)
+    print (args.conv_fc_threshold)
+
+    # exit()
 
     cfg.DATA_DIR = args.data_dir
     cfg.OUTPUT_DIR = args.output_dir
     cfg.MODEL.WEIGHT = args.pretrained_model
-    cfg.MODEL.ROI_BOX_HEAD.NEIGHBOR_EXPAND = args.bbox_expand
+    cfg.MODEL.ROI_BOX_HEAD.NEIGHBOR_CONV_EXPAND = args.conv_bbox_expand
+    cfg.MODEL.ROI_BOX_HEAD.NEIGHBOR_FC_EXPAND = args.fc_bbox_expand
 
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_GROUP = args.nonlocal_cls_num_group
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_STACK = args.nonlocal_cls_num_stack
@@ -323,6 +363,10 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_SOFTMAX = ast.literal_eval(args.nonlocal_use_softmax)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_FFCONV = ast.literal_eval(args.nonlocal_use_ffconv)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU = ast.literal_eval(args.nonlocal_use_relu)
+
+    cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_CONV = args.maplevel_conv
+    cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_FC = args.maplevel_fc
+    cfg.MODEL.ROI_BOX_HEAD.CONV_FC_THRESHOLD = args.conv_fc_threshold
 
     cfg.MODEL.BACKBONE.OUT_CHANNELS = args.backbone_out_channels
     cfg.freeze()

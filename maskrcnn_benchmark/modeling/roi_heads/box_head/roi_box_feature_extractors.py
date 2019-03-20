@@ -7,6 +7,7 @@ from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.backbone import resnet
 from maskrcnn_benchmark.modeling.poolers import Pooler
 from maskrcnn_benchmark.modeling.poolers import PoolerNeighbor
+from maskrcnn_benchmark.modeling.poolers import PoolerNeighborMap
 from maskrcnn_benchmark.modeling.make_layers import group_norm
 from maskrcnn_benchmark.modeling.make_layers import make_fc
 
@@ -185,14 +186,28 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         scales = cfg.MODEL.ROI_BOX_HEAD.POOLER_SCALES
         sampling_ratio = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
 
-        neighbor_expand = cfg.MODEL.ROI_BOX_HEAD.NEIGHBOR_EXPAND
+        conv_neighbor_expand = cfg.MODEL.ROI_BOX_HEAD.NEIGHBOR_CONV_EXPAND
+        fc_neighbor_expand = cfg.MODEL.ROI_BOX_HEAD.NEIGHBOR_FC_EXPAND
         roi_expand = cfg.MODEL.ROI_BOX_HEAD.ROI_EXPAND
-        pooler = PoolerNeighbor(
-            neighbor_expand=neighbor_expand,
+
+        maplevel_conv = cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_CONV 
+        maplevel_fc = cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_FC
+
+        self.pooler_conv = PoolerNeighborMap(
+            neighbor_expand=conv_neighbor_expand,
             roi_expand=roi_expand,
             output_size=(resolution, resolution),
             scales=scales,
             sampling_ratio=sampling_ratio,
+            maplevel = maplevel_conv
+        )
+        self.pooler_fc = PoolerNeighborMap(
+            neighbor_expand=fc_neighbor_expand,
+            roi_expand=roi_expand,
+            output_size=(resolution, resolution),
+            scales=scales,
+            sampling_ratio=sampling_ratio,
+            maplevel = maplevel_fc
         )
         # pooler = Pooler(
         #     output_size=(resolution, resolution),
@@ -204,7 +219,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         input_size = cfg.MODEL.BACKBONE.OUT_CHANNELS * resolution ** 2
         representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
         use_gn = cfg.MODEL.ROI_BOX_HEAD.USE_GN
-        self.pooler = pooler
+        # self.pooler = pooler
 
         nonlocal_use_bn = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN
         nonlocal_use_relu = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU
@@ -261,18 +276,24 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         self.fc7 = make_fc(representation_size, representation_size, use_gn)
 
     def forward(self, x, proposals):
-        x, levels = self.pooler(x, proposals)
+        x_conv = x
+        x_fc = x
+        x_conv = self.pooler_conv(x_conv, proposals)
+        x_fc = self.pooler_fc(x_fc, proposals)
+        # x_conv, levels_conv = self.pooler_conv(x_conv, proposals)
+        # x_fc, levels_fc = self.pooler_fc(x_fc, proposals)
 
-        identity = x
+
+        identity = x_fc
         ### model Y
-        x =  self.nonlocal_conv(x)
+        x_conv =  self.nonlocal_conv(x_conv)
         ## shared
         for i in range(self.shared_num_stack):
-            x = self.shared_nonlocal[i](x)
+            x_conv = self.shared_nonlocal[i](x_conv)
 
         ## seperate
-        x_cls = x
-        x_reg = x
+        x_cls = x_conv
+        x_reg = x_conv
         for i in range(self.cls_num_stack):
             x_cls = self.cls_nonlocal[i](x_cls)
         for i in range(self.reg_num_stack):
@@ -289,7 +310,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         identity = F.relu(self.fc6(identity))
         identity = F.relu(self.fc7(identity))
 
-        return tuple((x_cls, x_reg, identity, levels))
+        return tuple((x_cls, x_reg, identity))
 
 
 

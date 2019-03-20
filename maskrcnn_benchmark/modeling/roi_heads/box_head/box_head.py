@@ -8,6 +8,20 @@ from .inference import make_roi_box_post_processor
 from .loss import make_roi_box_loss_evaluator
 from .attention import NONLocalBlock2D
 
+from ...utils import cat
+
+class ProposalMapper(object):
+    """
+    map proposal with a level   
+    """
+    def __init__(self, threshold=224):
+        self.threshold = threshold
+
+    def __call__(self, boxlists):
+        s = torch.sqrt(cat([boxlist.area() for boxlist in boxlists]))
+        idx_fc = torch.nonzero(s < self.threshold).squeeze(1)
+        idx_conv = torch.nonzero(s >= self.threshold).squeeze(1)
+        return idx_conv, idx_fc
 
 class ROIBoxHead(torch.nn.Module):
     """
@@ -22,6 +36,9 @@ class ROIBoxHead(torch.nn.Module):
         self.post_processor_fc = make_roi_box_post_processor(cfg)
         self.loss_evaluator = make_roi_box_loss_evaluator(cfg)
         # self.loss_evaluator_fc = make_roi_box_loss_evaluator(cfg)
+
+        conv_fc_threshold = cfg.MODEL.ROI_BOX_HEAD.CONV_FC_THRESHOLD
+        self.map_proposal_threshold=ProposalMapper(conv_fc_threshold)
 
     def forward(self, features, proposals, targets=None):
         """
@@ -49,7 +66,7 @@ class ROIBoxHead(torch.nn.Module):
         x = self.feature_extractor(features, proposals)
         # final classifier that converts the features into predictions
         # class_logits, box_regression = self.predictor(x)
-        class_logits, box_regression, class_logits_fc, box_regression_fc, levels = self.predictor(x)
+        class_logits, box_regression, class_logits_fc, box_regression_fc = self.predictor(x)
 
         if not self.training:
             # print (class_logits.shape)
@@ -76,16 +93,23 @@ class ROIBoxHead(torch.nn.Module):
 
             ## 0 1 from fc
             ## 2 3 from conv
-            idx_in_level_01 = torch.cat((torch.nonzero(levels == 0).squeeze(1), torch.nonzero(levels == 1).squeeze(1)))
-            idx_in_level_23 = torch.cat((torch.nonzero(levels == 2).squeeze(1), torch.nonzero(levels == 3).squeeze(1)))
+            idx_conv, idx_fc = self.map_proposal_threshold(proposals)
+            # print (idx_conv.shape)
+            # print (idx_fc.shape)
+            # exit()
+
+            # idx_in_level_01 = torch.cat((torch.nonzero(levels == 0).squeeze(1), torch.nonzero(levels == 1).squeeze(1)))
+            # idx_in_level_23 = torch.cat((torch.nonzero(levels == 2).squeeze(1), torch.nonzero(levels == 3).squeeze(1)))
             # print (idx_in_level_01.shape)
             # print (idx_in_level_23.shape)
 
             ## get 
-            class_logits_combine[idx_in_level_01]   = class_logits_fc[idx_in_level_01]
-            box_regression_combine[idx_in_level_01] = box_regression_fc[idx_in_level_01]
-            class_logits_combine[idx_in_level_23]   = class_logits[idx_in_level_23]
-            box_regression_combine[idx_in_level_23] = box_regression[idx_in_level_23]
+            class_logits_combine[idx_conv]   = class_logits[idx_conv]
+            box_regression_combine[idx_conv] = box_regression[idx_conv]
+
+            class_logits_combine[idx_fc]   = class_logits_fc[idx_fc]
+            box_regression_combine[idx_fc] = box_regression_fc[idx_fc]
+
             # class_logits_combine[idx_in_level_01]   = class_logits[idx_in_level_01]
             # box_regression_combine[idx_in_level_01] = box_regression[idx_in_level_01]
             # class_logits_combine[idx_in_level_23]   = class_logits_fc[idx_in_level_23]

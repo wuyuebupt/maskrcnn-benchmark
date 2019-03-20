@@ -129,7 +129,7 @@ class FPNPredictorNeighbor(nn.Module):
         scores_fc = self.cls_score_fc(x[2])
         bbox_deltas_fc = self.bbox_pred_fc(x[2])
 
-        return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[3]
+        return scores, bbox_deltas, scores_fc, bbox_deltas_fc
 
 
 
