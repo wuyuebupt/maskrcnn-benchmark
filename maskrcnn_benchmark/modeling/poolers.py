@@ -46,7 +46,7 @@ class LevelMapperInput(object):
     on the heuristic in the FPN paper.
     """
 
-    def __init__(self, scales):
+    def __init__(self, scales, mask):
         """
         Arguments:
             k_min (int)
@@ -58,8 +58,12 @@ class LevelMapperInput(object):
         self.scales = scales
         self.scales_min = scales[:-1]
         self.scales_max = scales[1:]
-        # print (self.scales_min)
-        # print (self.scales_max)
+        self.scales_mask = mask
+
+        print (self.scales_min)
+        print (self.scales_max)
+        print (self.scales_mask)
+
         # exit()
 
 
@@ -80,14 +84,20 @@ class LevelMapperInput(object):
         # print (s.dtype)
 
         device = s.device
-
         lvls = torch.zeros(
                 s.shape,
                 dtype=torch.int64,
                 device=device,
             )
 
-        for level, (scale_min, scale_max) in enumerate(zip(self.scales_min, self.scales_max)):
+
+        masks = torch.zeros(
+                s.shape,
+                dtype=torch.float,
+                device=device,
+            )
+
+        for level, (scale_min, scale_max, scale_mask) in enumerate(zip(self.scales_min, self.scales_max, self.scales_mask)):
             # print (level, scale_min, scale_max)
             ## find index
             scale_min = scale_min
@@ -101,7 +111,9 @@ class LevelMapperInput(object):
             idx_in_level = torch.nonzero(s_min_max).squeeze(1)
             # print (idx_in_level.shape)
             lvls[idx_in_level] = level
+            masks[idx_in_level] = scale_mask 
         # print (lvls)
+        # print (masks)
         # exit()
 
 
@@ -118,7 +130,7 @@ class LevelMapperInput(object):
         # res  = target_lvls.to(torch.int64) - self.k_min
         # print (res)
         # exit()
-        return lvls.to(torch.int64)
+        return lvls.to(torch.int64), masks.to(torch.float)
 
 
 class Pooler(nn.Module):
@@ -358,7 +370,7 @@ class PoolerNeighborMap(nn.Module):
     which is available thanks to the BoxList.
     """
 
-    def __init__(self, neighbor_expand, roi_expand, output_size, scales, sampling_ratio, maplevel):
+    def __init__(self, neighbor_expand, roi_expand, output_size, scales, sampling_ratio, maplevel, masklevel):
         """
         Arguments:
             neighbor_expand (float): scale for enlarged proposals
@@ -392,7 +404,7 @@ class PoolerNeighborMap(nn.Module):
         # lvl_min = -torch.log2(torch.tensor(scales[0], dtype=torch.float32)).item()
         # lvl_max = -torch.log2(torch.tensor(scales[-1], dtype=torch.float32)).item()
         # self.map_levels = LevelMapper(lvl_min, lvl_max)
-        self.map_levels = LevelMapperInput(maplevel)
+        self.map_levels = LevelMapperInput(maplevel, masklevel)
         # print (scales)
         # print (lvl_min)
         # print (lvl_max)
@@ -477,7 +489,7 @@ class PoolerNeighborMap(nn.Module):
             # exit()
             return self.poolers[0](x[0], rois)
 
-        levels = self.map_levels(boxes)
+        levels, masks = self.map_levels(boxes)
         # print (levels)
 
         num_rois = len(rois)
@@ -501,4 +513,4 @@ class PoolerNeighborMap(nn.Module):
         # print (result.shape)
         # exit()
  
-        return result
+        return result, masks

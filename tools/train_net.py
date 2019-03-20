@@ -294,6 +294,24 @@ def main():
         type=int,
     )
     parser.add_argument(
+        "--mask-conv",
+        nargs = '*',
+        # default=[0, 3],
+        default=[],
+        help="model code for each avg",
+        metavar="1 1 1 1",
+        type=float,
+    )
+    parser.add_argument(
+        "--mask-fc",
+        nargs = '*',
+        # default=[0, 3],
+        default=[],
+        help="model code for each avg",
+        metavar="1 1 1 1",
+        type=float,
+    )
+    parser.add_argument(
         "--conv-fc-threshold",
         default="224",
         help="sqrt(wh) for conv and fc",
@@ -339,6 +357,8 @@ def main():
     ## for map level
     print (args.maplevel_fc)
     print (args.maplevel_conv)
+    print (args.mask_fc)
+    print (args.mask_conv)
     print (args.conv_fc_threshold)
 
     # exit()
@@ -366,6 +386,8 @@ def main():
 
     cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_CONV = args.maplevel_conv
     cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_FC = args.maplevel_fc
+    cfg.MODEL.ROI_BOX_HEAD.POOLER_MASK_CONV = args.mask_conv
+    cfg.MODEL.ROI_BOX_HEAD.POOLER_MASK_FC = args.mask_fc
     cfg.MODEL.ROI_BOX_HEAD.CONV_FC_THRESHOLD = args.conv_fc_threshold
 
     cfg.MODEL.BACKBONE.OUT_CHANNELS = args.backbone_out_channels

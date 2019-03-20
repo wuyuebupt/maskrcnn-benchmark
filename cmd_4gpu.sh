@@ -1,7 +1,7 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
 export NGPUS=4
-export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v12/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v13/
 
 ### for images/gpu = 1
 ### Resnet 50, C4
@@ -78,5 +78,7 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --fc-bbox-expand  1.0 \
 --backbone-out-channels $OUT_CHANNELS \
 --maplevel-fc 0 160 320 100000 100000 \
+--mask-fc 1 1 0.5 0 \
 --maplevel-conv 0 0 160 320 100000 \
+--mask-conv 0 0.5 1 1 \
 --conv-fc-threshold 224

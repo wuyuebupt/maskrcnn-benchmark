@@ -66,7 +66,7 @@ class ROIBoxHead(torch.nn.Module):
         x = self.feature_extractor(features, proposals)
         # final classifier that converts the features into predictions
         # class_logits, box_regression = self.predictor(x)
-        class_logits, box_regression, class_logits_fc, box_regression_fc = self.predictor(x)
+        class_logits, box_regression, class_logits_fc, box_regression_fc, mask, mask_fc = self.predictor(x)
 
         if not self.training:
             # print (class_logits.shape)
@@ -132,11 +132,11 @@ class ROIBoxHead(torch.nn.Module):
             return x, result, {}
 
         loss_classifier, loss_box_reg = self.loss_evaluator(
-            [class_logits], [box_regression]
+            [class_logits], [box_regression], [mask]
         )
 
         loss_classifier_fc, loss_box_reg_fc = self.loss_evaluator(
-            [class_logits_fc], [box_regression_fc]
+            [class_logits_fc], [box_regression_fc], [mask_fc]
         )
         return (
             x,

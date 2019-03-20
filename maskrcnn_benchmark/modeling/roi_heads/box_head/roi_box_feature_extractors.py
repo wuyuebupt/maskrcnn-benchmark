@@ -192,6 +192,8 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
 
         maplevel_conv = cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_CONV 
         maplevel_fc = cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_FC
+        masklevel_conv = cfg.MODEL.ROI_BOX_HEAD.POOLER_MASK_CONV 
+        masklevel_fc = cfg.MODEL.ROI_BOX_HEAD.POOLER_MASK_FC
 
         self.pooler_conv = PoolerNeighborMap(
             neighbor_expand=conv_neighbor_expand,
@@ -199,7 +201,8 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
             output_size=(resolution, resolution),
             scales=scales,
             sampling_ratio=sampling_ratio,
-            maplevel = maplevel_conv
+            maplevel = maplevel_conv,
+            masklevel  = masklevel_conv
         )
         self.pooler_fc = PoolerNeighborMap(
             neighbor_expand=fc_neighbor_expand,
@@ -207,7 +210,8 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
             output_size=(resolution, resolution),
             scales=scales,
             sampling_ratio=sampling_ratio,
-            maplevel = maplevel_fc
+            maplevel = maplevel_fc,
+            masklevel = masklevel_fc
         )
         # pooler = Pooler(
         #     output_size=(resolution, resolution),
@@ -278,8 +282,8 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
     def forward(self, x, proposals):
         x_conv = x
         x_fc = x
-        x_conv = self.pooler_conv(x_conv, proposals)
-        x_fc = self.pooler_fc(x_fc, proposals)
+        x_conv, mask = self.pooler_conv(x_conv, proposals)
+        x_fc, mask_fc = self.pooler_fc(x_fc, proposals)
         # x_conv, levels_conv = self.pooler_conv(x_conv, proposals)
         # x_fc, levels_fc = self.pooler_fc(x_fc, proposals)
 
@@ -310,7 +314,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         identity = F.relu(self.fc6(identity))
         identity = F.relu(self.fc7(identity))
 
-        return tuple((x_cls, x_reg, identity))
+        return tuple((x_cls, x_reg, identity, mask, mask_fc))
 
 
 

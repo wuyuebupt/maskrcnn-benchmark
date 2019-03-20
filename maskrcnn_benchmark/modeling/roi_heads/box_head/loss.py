@@ -3,6 +3,8 @@ import torch
 from torch.nn import functional as F
 
 from maskrcnn_benchmark.layers import smooth_l1_loss
+from maskrcnn_benchmark.layers.smooth_l1_loss import smooth_l1_loss_mask
+# from maskrcnn_benchmark.layers import smooth_l1_loss_mask
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
@@ -115,7 +117,7 @@ class FastRCNNLossComputation(object):
         self._proposals = proposals
         return proposals
 
-    def __call__(self, class_logits, box_regression):
+    def __call__(self, class_logits, box_regression, mask):
         """
         Computes the loss for Faster R-CNN.
         This requires that the subsample method has been called beforehand.
@@ -123,6 +125,7 @@ class FastRCNNLossComputation(object):
         Arguments:
             class_logits (list[Tensor])
             box_regression (list[Tensor])
+            mask (list[Tensor])
 
         Returns:
             classification_loss (Tensor)
@@ -131,6 +134,8 @@ class FastRCNNLossComputation(object):
 
         class_logits = cat(class_logits, dim=0)
         box_regression = cat(box_regression, dim=0)
+        mask = cat(mask, dim=0)
+
         device = class_logits.device
 
         if not hasattr(self, "_proposals"):
@@ -143,28 +148,83 @@ class FastRCNNLossComputation(object):
             [proposal.get_field("regression_targets") for proposal in proposals], dim=0
         )
 
-        classification_loss = F.cross_entropy(class_logits, labels)
+        # print (class_logits.shape)
+        # print (labels.shape)
+        classification_loss = F.cross_entropy(class_logits, labels, reduce=False)
+        # print (classification_loss)
+        # print (classification_loss.shape)
+        classification_loss_mask = classification_loss * mask.to(torch.float)
+        # classification_loss_mask = classification_loss * mask.to(torch.cuda.FloatTensor)
+        # print (classification_loss_mask)
+        classification_loss_mask_ = torch.sum(classification_loss_mask) / classification_loss_mask.numel()
+        # classification_loss_mask_ = torch.sum(classification_loss_mask) / (torch.sum(mask) + 1e-6)
+        # print (classification_loss_mask_)
+        # print (mask)
+
+        # # loss = F.cross_entropy(cls_sum, labels, reduce=False)
+        # # # print (loss.shape)
+        # # loss = loss * mask
+        # # loss = torch.mean(loss)
+        # exit()
+        ## mask
+
+
+        ##  = F.cross_entropy(class_logits, labels)
+        ## ilassification_loss = F.cross_entropy(class_logits, labels)
 
         # get indices that correspond to the regression targets for
         # the corresponding ground truth labels, to be used with
         # advanced indexing
+
+        # print (labels)
         sampled_pos_inds_subset = torch.nonzero(labels > 0).squeeze(1)
+        # print (sampled_pos_inds_subset)
         labels_pos = labels[sampled_pos_inds_subset]
+        # print (labels_pos)
+
+
         if self.cls_agnostic_bbox_reg:
             map_inds = torch.tensor([4, 5, 6, 7], device=device)
         else:
             map_inds = 4 * labels_pos[:, None] + torch.tensor(
                 [0, 1, 2, 3], device=device)
 
-        box_loss = smooth_l1_loss(
+        # print (map_inds)
+        # print (sampled_pos_inds_subset)
+        # print (box_regression.shape)
+        # print (box_regression[sampled_pos_inds_subset[:, None], map_inds].shape)
+
+        mask_reg = mask[sampled_pos_inds_subset]
+        # print (mask_reg)
+        # print (mask_reg.shape)
+
+        # box_loss = smooth_l1_loss(
+        box_loss = smooth_l1_loss_mask(
             box_regression[sampled_pos_inds_subset[:, None], map_inds],
             regression_targets[sampled_pos_inds_subset],
             size_average=False,
             beta=1,
+            mask=mask_reg
         )
+        # print (box_loss)
         box_loss = box_loss / labels.numel()
+        # print (box_loss)
+        # exit()
 
-        return classification_loss, box_loss
+
+        # print (box_loss)
+        # print (labels.numel())
+        # exit()
+
+        ## hard code * 0.5
+        # classification_loss = classification_loss * 0.5
+        # box_loss = box_loss * 0.5
+        # return classification_loss, box_loss
+
+        classification_loss_mask_ = classification_loss_mask_ * 0.5
+        box_loss = box_loss * 0.5
+
+        return classification_loss_mask_, box_loss
 
 
 def make_roi_box_loss_evaluator(cfg):
