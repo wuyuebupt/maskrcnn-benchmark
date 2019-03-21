@@ -86,3 +86,8 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 
 
 
+####### for mask
+#         self.conv_cls_weight = mask_loss[0]
+#         self.conv_reg_weight = mask_loss[1]
+#         self.fc_cls_weight = mask_loss[2]
+#         self.fc_reg_weight = mask_loss[3]

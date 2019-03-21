@@ -55,7 +55,11 @@ python  tools/train_net.py \
 --conv-fc-threshold 224
 
 
-
+####### for mask
+#         self.conv_cls_weight = mask_loss[0]
+#         self.conv_reg_weight = mask_loss[1]
+#         self.fc_cls_weight = mask_loss[2]
+#         self.fc_reg_weight = mask_loss[3]
 
 
 # --maplevel-fc 0 112 224 448 100000 \
