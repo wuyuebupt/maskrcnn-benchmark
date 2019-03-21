@@ -312,6 +312,14 @@ def main():
         type=float,
     )
     parser.add_argument(
+        "--mask-loss",
+        nargs = '*',
+        default=[],
+        help="model code for each mask",
+        metavar="1 1 1 1",
+        type=float,
+    )
+    parser.add_argument(
         "--conv-fc-threshold",
         default="224",
         help="sqrt(wh) for conv and fc",
@@ -359,9 +367,9 @@ def main():
     print (args.maplevel_conv)
     print (args.mask_fc)
     print (args.mask_conv)
+    print (args.mask_loss)
     print (args.conv_fc_threshold)
 
-    # exit()
 
     cfg.DATA_DIR = args.data_dir
     cfg.OUTPUT_DIR = args.output_dir
@@ -388,6 +396,7 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_FC = args.maplevel_fc
     cfg.MODEL.ROI_BOX_HEAD.POOLER_MASK_CONV = args.mask_conv
     cfg.MODEL.ROI_BOX_HEAD.POOLER_MASK_FC = args.mask_fc
+    cfg.MODEL.ROI_BOX_HEAD.MASK_LOSS = args.mask_loss
     cfg.MODEL.ROI_BOX_HEAD.CONV_FC_THRESHOLD = args.conv_fc_threshold
 
     cfg.MODEL.BACKBONE.OUT_CHANNELS = args.backbone_out_channels

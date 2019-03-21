@@ -77,8 +77,12 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --conv-bbox-expand  1.2 \
 --fc-bbox-expand  1.0 \
 --backbone-out-channels $OUT_CHANNELS \
---maplevel-fc 0 160 320 100000 100000 \
---mask-fc 1 1 0.5 0 \
---maplevel-conv 0 0 160 320 100000 \
---mask-conv 0 0.5 1 1 \
+--maplevel-fc 0 112 224 448 100000 \
+--mask-fc 1 1 1 1 \
+--maplevel-conv 0 112 224 448 100000 \
+--mask-conv 1 1 1 1 \
+--mask-loss 0.5 0.5 0.5 0.5 \
 --conv-fc-threshold 224
+
+
+

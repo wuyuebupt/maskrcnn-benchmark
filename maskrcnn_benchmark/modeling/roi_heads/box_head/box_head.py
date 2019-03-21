@@ -40,6 +40,12 @@ class ROIBoxHead(torch.nn.Module):
         conv_fc_threshold = cfg.MODEL.ROI_BOX_HEAD.CONV_FC_THRESHOLD
         self.map_proposal_threshold=ProposalMapper(conv_fc_threshold)
 
+        mask_loss = cfg.MODEL.ROI_BOX_HEAD.MASK_LOSS
+        self.conv_cls_weight = mask_loss[0]
+        self.conv_reg_weight = mask_loss[1]
+        self.fc_cls_weight = mask_loss[2]
+        self.fc_reg_weight = mask_loss[3]
+
     def forward(self, features, proposals, targets=None):
         """
         Arguments:
@@ -138,6 +144,23 @@ class ROIBoxHead(torch.nn.Module):
         loss_classifier_fc, loss_box_reg_fc = self.loss_evaluator(
             [class_logits_fc], [box_regression_fc], [mask_fc]
         )
+
+        ## loss weights
+        # print (loss_classifier)
+        # print (loss_box_reg)
+        # print (loss_classifier_fc)
+        # print (loss_box_reg_fc)
+        loss_classifier = loss_classifier * self.conv_cls_weight
+        loss_box_reg = loss_box_reg * self.conv_reg_weight
+        loss_classifier_fc = loss_classifier_fc * self.fc_cls_weight
+        loss_box_reg_fc = loss_box_reg_fc * self.fc_reg_weight
+        # print (loss_classifier)
+        # print (loss_box_reg)
+        # print (loss_classifier_fc)
+        # print (loss_box_reg_fc)
+        # exit()
+
+
         return (
             x,
             proposals,
