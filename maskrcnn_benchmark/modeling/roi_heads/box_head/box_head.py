@@ -109,12 +109,17 @@ class ROIBoxHead(torch.nn.Module):
             # print (idx_in_level_01.shape)
             # print (idx_in_level_23.shape)
 
-            ## get 
-            class_logits_combine[idx_conv]   = class_logits[idx_conv]
-            box_regression_combine[idx_conv] = box_regression[idx_conv]
 
-            class_logits_combine[idx_fc]   = class_logits_fc[idx_fc]
-            box_regression_combine[idx_fc] = box_regression_fc[idx_fc]
+            ## cls from fc, reg from conv
+            class_logits_combine   = class_logits_fc
+            box_regression_combine = box_regression
+
+            ## get 
+            #$ class_logits_combine[idx_conv]   = class_logits[idx_conv]
+            #$ box_regression_combine[idx_conv] = box_regression[idx_conv]
+
+            #$ class_logits_combine[idx_fc]   = class_logits_fc[idx_fc]
+            #$ box_regression_combine[idx_fc] = box_regression_fc[idx_fc]
 
             # class_logits_combine[idx_in_level_01]   = class_logits[idx_in_level_01]
             # box_regression_combine[idx_in_level_01] = box_regression[idx_in_level_01]
