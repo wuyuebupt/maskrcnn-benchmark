@@ -1,6 +1,6 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
-export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v13/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v14/
 
 ### Resnet 50, C4
 # export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_50_C4_1x_neighbor.yaml
@@ -45,15 +45,29 @@ python  tools/train_net.py \
 --nonlocal-use-relu True \
 --nonlocal-use-softmax False \
 --nonlocal-use-ffconv False \
+--nonlocal-use-attention False \
 --conv-bbox-expand  1.2 \
 --fc-bbox-expand  1.0 \
 --backbone-out-channels $OUT_CHANNELS \
---maplevel-fc 0 160 320 100000 100000 \
---mask-fc 1 1 0.5 0 \
---maplevel-conv 0 0 160 320 100000 \
---mask-conv 0 0.5 1 1 \
---conv-fc-threshold 224
+--maplevel-fc 0 112 224 448 100000 \
+--mask-fc 1 1 1 1 \
+--maplevel-conv 0 112 224 448 100000 \
+--mask-conv 1 1 1 1 \
+--mask-loss 0.5 0.5 0.5 0.5 \
+--conv-fc-threshold 224 \
+--lr-steps 100 200 300
 
+
+
+# --lr-steps 120000 160000 180000
+
+
+####### lr schedule
+# 1x, 180k: decrease at 120000 and 160000, end at 180000
+#
+#
+#
+# 
 
 ####### for mask
 #         self.conv_cls_weight = mask_loss[0]

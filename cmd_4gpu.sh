@@ -72,6 +72,7 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --nonlocal-use-relu True \
 --nonlocal-use-softmax False \
 --nonlocal-use-ffconv True \
+--nonlocal-use-attention True \
 --nonlocal-inter-channels $INTER_CHANNELS \
 --nonlocal-out-channels $NONLOCAL_OUT_CHANNELS \
 --conv-bbox-expand  1.2 \
@@ -82,7 +83,34 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --maplevel-conv 0 112 224 448 100000 \
 --mask-conv 1 1 1 1 \
 --mask-loss 0.5 0.5 0.5 0.5 \
---conv-fc-threshold 224
+--lr-steps 200000 240000 260000 
+
+####### lr schedule: with batch size 8, init lr 0.01 ##################
+# 1x, 180k: decrease at 120000 and 160000, end at 180000, This schedules results in 12.17 epochs over the 118,287 images in coco_2014_train union coco_2014_valminusminival (or equivalently, coco_2017_train).
+# --lr-steps 120000 160000 180000
+# 
+# 2x: twice
+# --lr-steps 240000 320000 360000
+#
+# s1x: stretched 1x, 1.44x + extends the duration of the first learning rate
+# --lr-steps 200000 240000 260000 
+#
+# 280k: cascade RCNN, (the setting used: FPN+(RoIAlign) , ResNet101, 512 ROIs, batchsize 8, init lr 0.005)
+# --lr-steps 160000 240000 280000
+#######################################################################
+
+
+
+
+
+#### for debug, 
+# --lr-steps 100 200 300
+# SOLVER:
+#   BASE_LR: 0.01
+#   IMS_PER_BATCH: 8
+#   MAX_ITER: 300
+#   STEPS: (100, 200)
+
 
 
 

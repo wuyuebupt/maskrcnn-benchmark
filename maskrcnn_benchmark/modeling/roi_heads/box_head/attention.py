@@ -63,7 +63,7 @@ class FPNFFConv(nn.Module):
 
 ### group non local
 class _NonLocalBlockND_Group(nn.Module):
-    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True):
+    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True, use_attention=True):
         super(_NonLocalBlockND_Group, self).__init__()
 
         assert dimension in [1, 2, 3]
@@ -93,6 +93,7 @@ class _NonLocalBlockND_Group(nn.Module):
         self.use_softmax = use_softmax
 
         self.use_ffconv = use_ffconv
+        self.use_attention = use_attention
 
         if self.use_softmax:
             self.softmax = nn.Softmax(dim=2)
@@ -153,45 +154,23 @@ class _NonLocalBlockND_Group(nn.Module):
         :return:
         '''
         # print (x.shape)
-        batch_size = x.size(0)
         # print (batch_size)
 
 
-        ## from yiche
-        ## input x
-        g_x = self.g(x).view(batch_size, self.inter_channels, -1)
-        g_x = g_x.permute(0, 2, 1)
-        ## input x
-        theta_x = self.theta(x).view(batch_size, self.inter_channels, -1)
-        theta_x = theta_x.permute(0, 2, 1)
-        ## input x
-        phi_x = self.phi(x).view(batch_size, self.inter_channels, -1)
+        if self.use_attention:
+            ## from yiche
+            ## input x
+            batch_size = x.size(0)
+            g_x = self.g(x).view(batch_size, self.inter_channels, -1)
+            g_x = g_x.permute(0, 2, 1)
+            ## input x
+            theta_x = self.theta(x).view(batch_size, self.inter_channels, -1)
+            theta_x = theta_x.permute(0, 2, 1)
+            ## input x
+            phi_x = self.phi(x).view(batch_size, self.inter_channels, -1)
 
-        if self.num_group == 1:
-            f = torch.matmul(theta_x, phi_x)
-
-            if self.use_softmax == True:
-                f_div_C = self.softmax(f)
-            else:
-                N = f.size(-1)
-                f_div_C = f / N
-
-            yy = torch.matmul(f_div_C, g_x)
-            yy = yy.permute(0, 2, 1).contiguous()
-
-            yy = yy.view(batch_size, self.inter_channels, *x.size()[2:])
-            W_y = self.W(yy)
-        else:    
-            g_xs = torch.split(g_x, self.inter_channels_group, dim=2)
-            theta_xs = torch.split(theta_x, self.inter_channels_group, dim=2) 
-            phi_xs = torch.split(phi_x, self.inter_channels_group, dim=1)
-            # print (len(phi_xs)) #  = torch.split(phi_x, self.inter_channels, dim=1)
-            # print (theta_xs.shape) #  = torch.split(phi_x, self.inter_channels, dim=1)
-            #print (g.shape) #  = torch.split(phi_x, self.inter_channels, dim=1)
-            # exit()
-            y_group = []
-            for gx, tx, px in zip(g_xs, theta_xs, phi_xs):
-                f = torch.matmul(tx, px)
+            if self.num_group == 1:
+                f = torch.matmul(theta_x, phi_x)
 
                 if self.use_softmax == True:
                     f_div_C = self.softmax(f)
@@ -199,19 +178,46 @@ class _NonLocalBlockND_Group(nn.Module):
                     N = f.size(-1)
                     f_div_C = f / N
 
-                yy = torch.matmul(f_div_C, gx)
+                yy = torch.matmul(f_div_C, g_x)
                 yy = yy.permute(0, 2, 1).contiguous()
-                y_group.append(yy)
 
-            y_out = torch.cat(y_group, dim=1)
-            y_out = y_out.view(batch_size, self.inter_channels, *x.size()[2:])
-            W_y = self.W(y_out)
+                yy = yy.view(batch_size, self.inter_channels, *x.size()[2:])
+                W_y = self.W(yy)
+            else:    
+                g_xs = torch.split(g_x, self.inter_channels_group, dim=2)
+                theta_xs = torch.split(theta_x, self.inter_channels_group, dim=2) 
+                phi_xs = torch.split(phi_x, self.inter_channels_group, dim=1)
+                # print (len(phi_xs)) #  = torch.split(phi_x, self.inter_channels, dim=1)
+                # print (theta_xs.shape) #  = torch.split(phi_x, self.inter_channels, dim=1)
+                #print (g.shape) #  = torch.split(phi_x, self.inter_channels, dim=1)
+                # exit()
+                y_group = []
+                for gx, tx, px in zip(g_xs, theta_xs, phi_xs):
+                    f = torch.matmul(tx, px)
 
-        z = W_y + x
+                    if self.use_softmax == True:
+                        f_div_C = self.softmax(f)
+                    else:
+                        N = f.size(-1)
+                        f_div_C = f / N
 
-        ## relu after residual
-        if self.relu_layer:
-            z = self.relu(z)
+                    yy = torch.matmul(f_div_C, gx)
+                    yy = yy.permute(0, 2, 1).contiguous()
+                    y_group.append(yy)
+
+                y_out = torch.cat(y_group, dim=1)
+                y_out = y_out.view(batch_size, self.inter_channels, *x.size()[2:])
+                W_y = self.W(y_out)
+
+            z = W_y + x
+
+            ## relu after residual
+            if self.relu_layer:
+                z = self.relu(z)
+
+
+        else:
+            z = x
 
         ## add one more conv
         if self.use_ffconv:
@@ -226,12 +232,12 @@ class _NonLocalBlockND_Group(nn.Module):
 
 
 class NONLocalBlock2D_Group(_NonLocalBlockND_Group):
-    def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True):
+    def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True, use_attention=True):
         super(NONLocalBlock2D_Group, self).__init__(in_channels,
                                               num_group=num_group,
                                               inter_channels=inter_channels,
                                               dimension=2, sub_sample=sub_sample,
-                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax, use_ffconv=use_ffconv)
+                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax, use_ffconv=use_ffconv, use_attention=use_attention)
 
 
 ## original non local

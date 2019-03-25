@@ -240,6 +240,14 @@ def main():
         type=str,
     )
     parser.add_argument(
+        "--nonlocal-use-attention",
+        default="True",
+        help="nonlocal use attention before ffconv",
+        metavar="True",
+        type=str,
+    )
+
+    parser.add_argument(
         "--nonlocal-use-ffconv",
         default="True",
         help="nonlocal use ffconv after nonlocal with residual",
@@ -326,6 +334,16 @@ def main():
         metavar="224",
         type=int,
     )
+
+    parser.add_argument(
+        "--lr-steps",
+        nargs = '*',
+        # default=[0, 3],
+        default=[],
+        help="model code for each avg",
+        metavar="120000 160000 180000",
+        type=int,
+    )
     args = parser.parse_args()
     print (args.config_file)
 
@@ -359,6 +377,7 @@ def main():
     print (args.nonlocal_out_channels)
     print (args.nonlocal_use_softmax)
     print (args.nonlocal_use_ffconv)
+    print (args.nonlocal_use_attention)
     print (args.conv_bbox_expand)
     print (args.fc_bbox_expand)
     print (args.backbone_out_channels)
@@ -369,7 +388,7 @@ def main():
     print (args.mask_conv)
     print (args.mask_loss)
     print (args.conv_fc_threshold)
-
+    print (args.lr_steps)
 
     cfg.DATA_DIR = args.data_dir
     cfg.OUTPUT_DIR = args.output_dir
@@ -392,6 +411,8 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_FFCONV = ast.literal_eval(args.nonlocal_use_ffconv)
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU = ast.literal_eval(args.nonlocal_use_relu)
 
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_ATTENTION = ast.literal_eval(args.nonlocal_use_attention)
+
     cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_CONV = args.maplevel_conv
     cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_FC = args.maplevel_fc
     cfg.MODEL.ROI_BOX_HEAD.POOLER_MASK_CONV = args.mask_conv
@@ -400,9 +421,16 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.CONV_FC_THRESHOLD = args.conv_fc_threshold
 
     cfg.MODEL.BACKBONE.OUT_CHANNELS = args.backbone_out_channels
+
+    ## for lr
+    # print (cfg.SOLVER.STEPS)
+    # print (cfg.SOLVER.MAX_ITER)
+    cfg.SOLVER.MAX_ITER = args.lr_steps[2]
+    cfg.SOLVER.STEPS = (args.lr_steps[0], args.lr_steps[1])
+    # print (cfg.SOLVER.MAX_ITER)
+    # print (cfg.SOLVER.STEPS)
     cfg.freeze()
     # print (cfg)
-    # exit()
 
     output_dir = cfg.OUTPUT_DIR
     # print (output_dir)
