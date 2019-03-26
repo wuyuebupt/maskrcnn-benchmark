@@ -38,13 +38,13 @@ python  tools/train_net.py \
 --nonlocal-reg-num-group 2 \
 --nonlocal-reg-num-stack 0 \
 --nonlocal-shared-num-group 4 \
---nonlocal-shared-num-stack 2 \
+--nonlocal-shared-num-stack 1 \
 --nonlocal-inter-channels $INTER_CHANNELS \
 --nonlocal-out-channels $NONLOCAL_OUT_CHANNELS \
 --nonlocal-use-bn True \
 --nonlocal-use-relu True \
 --nonlocal-use-softmax False \
---nonlocal-use-ffconv False \
+--nonlocal-use-ffconv True \
 --nonlocal-use-attention False \
 --conv-bbox-expand  1.2 \
 --fc-bbox-expand  1.0 \

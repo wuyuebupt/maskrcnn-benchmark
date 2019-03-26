@@ -101,39 +101,40 @@ class _NonLocalBlockND_Group(nn.Module):
 
         assert self.num_group <= self.inter_channels
 
-        self.inter_channels_group = self.inter_channels // self.num_group
-        print (self.inter_channels_group)
+        if self.use_attention:
+            self.inter_channels_group = self.inter_channels // self.num_group
+            print (self.inter_channels_group)
 
-        self.g = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
-                         kernel_size=1, stride=1, padding=0)
-
-        self.theta = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
+            self.g = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
                              kernel_size=1, stride=1, padding=0)
 
-        self.phi = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
-                           kernel_size=1, stride=1, padding=0)
+            self.theta = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
+                                 kernel_size=1, stride=1, padding=0)
 
-        assert sub_sample==False
-        if sub_sample:
-            self.g = nn.Sequential(self.g, max_pool_layer)
-            self.phi = nn.Sequential(self.phi, max_pool_layer)
+            self.phi = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
+                               kernel_size=1, stride=1, padding=0)
+
+            assert sub_sample==False
+            if sub_sample:
+                self.g = nn.Sequential(self.g, max_pool_layer)
+                self.phi = nn.Sequential(self.phi, max_pool_layer)
 
 
-        ## v2 
-        self.W = nn.Sequential(conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
-                         kernel_size=1, stride=1, padding=0))
-        print (self.W)
-        ## BN first then RELU
-        if bn_layer:
-            self.W.add_module(
-                'bn', bn(self.in_channels)
-            )
+            ## v2 
+            self.W = nn.Sequential(conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
+                             kernel_size=1, stride=1, padding=0))
+            print (self.W)
+            ## BN first then RELU
+            if bn_layer:
+                self.W.add_module(
+                    'bn', bn(self.in_channels)
+                )
 
-        print (self.W)
+            print (self.W)
 
-        ## init the weights
-        nn.init.constant_(self.W[0].weight, 0)
-        nn.init.constant_(self.W[0].bias, 0)
+            ## init the weights
+            nn.init.constant_(self.W[0].weight, 0)
+            nn.init.constant_(self.W[0].bias, 0)
 
 
         if self.use_ffconv:
@@ -214,8 +215,6 @@ class _NonLocalBlockND_Group(nn.Module):
             ## relu after residual
             if self.relu_layer:
                 z = self.relu(z)
-
-
         else:
             z = x
 
