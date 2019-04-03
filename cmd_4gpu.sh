@@ -88,19 +88,19 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --lr-steps 100 200 300
 # --lr-steps 120000 160000 180000
 
-####### --stop-gradient 1 0 1 0: 4 flags in order, 0 off, 1 on ########
+####### --stop-gradient 1 0 1 0: 4 flags in order, 0 off no gradient, 1 with gradient ########
 # conv cls
 # conv reg
 # fc   cls
 # fc   reg
-#######################################################################
+##############################################################################################
 
-####### --evaluation-flags: 4 evaluations in order, 0 off, 1 on #######
-# 0 : conv cls + conv reg
-# 0 : fc cls + fc cls
-# 0 : fc cls + conv reg
-# 0 : fc cls + conv reg (in posterior bayesian manner)
-#######################################################################
+####### --evaluation-flags: 4 evaluations in order, 0 off, 1 on, can use 1 1 1 1 #############
+# conv cls + conv reg
+# fc cls + fc cls
+# fc cls + conv reg
+# fc cls + conv reg (in posterior bayesian manner)
+##############################################################################################
 
 ####### lr schedule: with batch size 8, init lr 0.01 ##################
 # 1x, 180k: decrease at 120000 and 160000, end at 180000, This schedules results in 12.17 epochs over the 118,287 images in coco_2014_train union coco_2014_valminusminival (or equivalently, coco_2017_train).
