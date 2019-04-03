@@ -58,6 +58,17 @@ def do_train(
     # print ("anything out???")
 
     model.train()
+
+    ### after detach, not a parameter, can not see in the model here, have to do in run time
+    # for param in model.parameters():
+    #     print (param.shape, param.requires_grad, param.is_leaf)
+    #     print (param.shape, param.requires_grad, param.is_leaf, param.grad)
+    #     # print (param.requires_grad)
+    #     # exit()
+    #     # if param.requires_grad == True:
+    # exit()
+
+
     start_training_time = time.time()
     end = time.time()
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
@@ -93,6 +104,17 @@ def do_train(
         optimizer.zero_grad()
         losses.backward()
         optimizer.step()
+
+        #### as RPN losses are always on, so backbone still has gradient even no loss from cls-reg heads
+        #### RUN time gradients check  
+        # for param in model.parameters():
+        #     # print (param.shape, param.requires_grad, param.is_leaf)
+        #     # print (param.shape, param.requires_grad, param.is_leaf, param.grad)
+        #     if param.grad is not None:
+        #         print (param.shape, param.requires_grad, param.is_leaf, param.grad.shape)
+        #     else:
+        #         print (param.shape, param.requires_grad, param.is_leaf, param.grad)
+        # exit()
 
         batch_time = time.time() - end
         end = time.time()

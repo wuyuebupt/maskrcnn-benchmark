@@ -15,18 +15,42 @@ from ..utils.comm import synchronize
 
 def compute_on_dataset(model, data_loader, device):
     model.eval()
-    results_dict = {}
+
+    results_dict_list = []
+    for i in range(4):
+        results_dict_list.append({})
+    # results_dict = {}
     cpu_device = torch.device("cpu")
     for i, batch in enumerate(tqdm(data_loader)):
         images, targets, image_ids = batch
         images = images.to(device)
         with torch.no_grad():
             output = model(images)
-            output = [o.to(cpu_device) for o in output]
-        results_dict.update(
-            {img_id: result for img_id, result in zip(image_ids, output)}
-        )
-    return results_dict
+            # print (len(output))
+            # exit()
+            # for out in output:
+            #     print (out)
+            #     exit()
+            output = [[o.to(cpu_device) for o in out] for out in output]
+
+        for j, out in enumerate(output):
+            results_dict_list[j].update(
+                {img_id: result for img_id, result in zip(image_ids, out)}
+            )
+        if i == 10:
+            break
+    ## remove empty dicts
+    results_dict_list_ = []
+    for results_dict in results_dict_list:
+        print (len(results_dict.keys()))
+        if len(results_dict.keys()) > 0:
+            results_dict_list_.append(results_dict)
+
+    # print (len(results_dict_list_))
+    # exit()
+    return results_dict_list_
+    # return results_dict_list
+    # return results_dict
 
 
 def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
@@ -34,11 +58,24 @@ def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
     if not is_main_process():
         return
     # merge the list of dicts
-    predictions = {}
+    # print (all_predictions)
+    # exit()
+    predictions_list = []
+    # predictions = {}
+    # print (len(predictions_per_gpu))
+    # exit()
+    for i in range(len(predictions_per_gpu)):
+    # for i in range(4):
+        predictions_list.append({})
+
     for p in all_predictions:
-        predictions.update(p)
+        # predictions.update(p)
+        for j, q in enumerate(p):
+            predictions_list[j].update(q)
+            
     # convert a dict where the key is the index in a list
-    image_ids = list(sorted(predictions.keys()))
+    # image_ids = list(sorted(predictions.keys()))
+    image_ids = list(sorted(predictions_list[0].keys()))
     if len(image_ids) != image_ids[-1] + 1:
         logger = logging.getLogger("maskrcnn_benchmark.inference")
         logger.warning(
@@ -47,8 +84,11 @@ def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
         )
 
     # convert to a list
-    predictions = [predictions[i] for i in image_ids]
-    return predictions
+    # predictions = [predictions[i] for i in image_ids]
+    predictions_list = [[predictions[i] for i in image_ids] for predictions in predictions_list]
+    # return predictions
+    # print (predictions_list)
+    return predictions_list
 
 
 def inference(
@@ -97,8 +137,17 @@ def inference(
         expected_results=expected_results,
         expected_results_sigma_tol=expected_results_sigma_tol,
     )
-
-    return evaluate(dataset=dataset,
-                    predictions=predictions,
+    returns = []
+    for prediction in predictions:
+        # print (len(prediction))
+        returns.append(evaluate(dataset=dataset,
+                    predictions=prediction,
                     output_folder=output_folder,
                     **extra_args)
+                    )
+
+    return returns 
+    # return evaluate(dataset=dataset,
+    #                 predictions=predictions,
+    #                 output_folder=output_folder,
+    #                 **extra_args)

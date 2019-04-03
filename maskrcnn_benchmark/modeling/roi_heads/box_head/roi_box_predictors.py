@@ -107,6 +107,8 @@ class FPNPredictorNeighbor(nn.Module):
         num_bbox_reg_classes = 2 if cfg.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
         self.bbox_pred = nn.Linear(representation_size, num_bbox_reg_classes * 4)
 
+        self.loss_stop_gradient = cfg.MODEL.ROI_BOX_HEAD.LOSS_STOP_GRADIENT
+
         nn.init.normal_(self.cls_score.weight, std=0.01)
         nn.init.normal_(self.bbox_pred.weight, std=0.001)
         for l in [self.cls_score, self.bbox_pred]:
@@ -123,11 +125,53 @@ class FPNPredictorNeighbor(nn.Module):
             nn.init.constant_(l.bias, 0)
 
     def forward(self, x):
-        scores = self.cls_score(x[0])
-        bbox_deltas = self.bbox_pred(x[1])
+        ## detach the variable if nacessary
+        ## detach can not be in-place
 
-        scores_fc = self.cls_score_fc(x[2])
-        bbox_deltas_fc = self.bbox_pred_fc(x[2])
+        ## conv cls
+        if self.loss_stop_gradient[0] == 0:
+            x_conv_cls = x[0].detach()
+            scores = self.cls_score(x_conv_cls)
+        elif self.loss_stop_gradient[0] == 1:
+            scores = self.cls_score(x[0])
+        else:
+            assert(False, "error")
+
+        ## conv reg
+        if self.loss_stop_gradient[1] == 0:
+            x_conv_reg = x[1].detach()
+            bbox_deltas = self.bbox_pred(x_conv_reg)
+        elif self.loss_stop_gradient[1] == 1:
+            bbox_deltas = self.bbox_pred(x[1])
+        else:
+            assert(False, "error")
+
+        ## fc cls
+        x_fc_cls = x[2]
+        x_fc_reg = x[2]
+        if self.loss_stop_gradient[2] == 0:
+            x_fc_cls_detach = x_fc_cls.detach()
+            scores_fc = self.cls_score_fc(x_fc_cls_detach)
+        elif self.loss_stop_gradient[2] == 1:
+            scores_fc = self.cls_score_fc(x_fc_cls)
+        else:
+            assert(False, "error")
+
+
+        ## fc reg
+        if self.loss_stop_gradient[3] == 0:
+            x_fc_reg_detach = x_fc_reg.detach()
+            bbox_deltas_fc = self.bbox_pred_fc(x_fc_reg_detach)
+        elif self.loss_stop_gradient[3] == 1:
+            bbox_deltas_fc = self.bbox_pred_fc(x_fc_reg)
+        else:
+            assert(False, "error")
+
+        # scores = self.cls_score(x[0])
+        # bbox_deltas = self.bbox_pred(x[1])
+
+        # scores_fc = self.cls_score_fc(x[2])
+        # bbox_deltas_fc = self.bbox_pred_fc(x[2])
 
         return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[3], x[4]
 

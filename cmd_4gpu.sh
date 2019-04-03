@@ -1,7 +1,7 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
 export NGPUS=4
-export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v14/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v15/
 
 ### for images/gpu = 1
 ### Resnet 50, C4
@@ -83,7 +83,24 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --maplevel-conv 0 112 224 448 100000 \
 --mask-conv 1 1 1 1 \
 --mask-loss 0.5 0.5 0.5 0.5 \
---lr-steps 200000 240000 260000 
+--stop-gradient 1 0 1 0 \
+--evaluation-flags 0 1 1 1 \
+--lr-steps 100 200 300
+# --lr-steps 120000 160000 180000
+
+####### --stop-gradient 1 0 1 0: 4 flags in order, 0 off, 1 on ########
+# conv cls
+# conv reg
+# fc   cls
+# fc   reg
+#######################################################################
+
+####### --evaluation-flags: 4 evaluations in order, 0 off, 1 on #######
+# 0 : conv cls + conv reg
+# 0 : fc cls + fc cls
+# 0 : fc cls + conv reg
+# 0 : fc cls + conv reg (in posterior bayesian manner)
+#######################################################################
 
 ####### lr schedule: with batch size 8, init lr 0.01 ##################
 # 1x, 180k: decrease at 120000 and 160000, end at 180000, This schedules results in 12.17 epochs over the 118,287 images in coco_2014_train union coco_2014_valminusminival (or equivalently, coco_2017_train).

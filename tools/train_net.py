@@ -334,7 +334,6 @@ def main():
         metavar="224",
         type=int,
     )
-
     parser.add_argument(
         "--lr-steps",
         nargs = '*',
@@ -344,6 +343,25 @@ def main():
         metavar="120000 160000 180000",
         type=int,
     )
+    parser.add_argument(
+        "--stop-gradient",
+        nargs = '*',
+        # default=[0, 3],
+        default=[],
+        help="model code for loss gradient",
+        metavar="1 1 1 1",
+        type=int,
+    )
+    parser.add_argument(
+        "--evaluation-flags",
+        nargs = '*',
+        # default=[0, 3],
+        default=[],
+        help="model code for evaluation flags",
+        metavar="1 1 1 1",
+        type=int,
+    )
+
     args = parser.parse_args()
     print (args.config_file)
 
@@ -389,6 +407,8 @@ def main():
     print (args.mask_loss)
     print (args.conv_fc_threshold)
     print (args.lr_steps)
+    print (args.stop_gradient)
+    print (args.evaluation_flags)
 
     cfg.DATA_DIR = args.data_dir
     cfg.OUTPUT_DIR = args.output_dir
@@ -422,6 +442,11 @@ def main():
 
     cfg.MODEL.BACKBONE.OUT_CHANNELS = args.backbone_out_channels
 
+    # double heads
+    cfg.MODEL.ROI_BOX_HEAD.LOSS_STOP_GRADIENT = args.stop_gradient
+    cfg.TEST.EVALUATION_FLAGS = args.evaluation_flags
+
+
     ## for lr
     # print (cfg.SOLVER.STEPS)
     # print (cfg.SOLVER.MAX_ITER)
@@ -431,6 +456,7 @@ def main():
     # print (cfg.SOLVER.STEPS)
     cfg.freeze()
     # print (cfg)
+    # exit()
 
     output_dir = cfg.OUTPUT_DIR
     # print (output_dir)

@@ -33,18 +33,22 @@ class ROIBoxHead(torch.nn.Module):
         self.feature_extractor = make_roi_box_feature_extractor(cfg)
         self.predictor = make_roi_box_predictor(cfg)
         self.post_processor = make_roi_box_post_processor(cfg)
-        self.post_processor_fc = make_roi_box_post_processor(cfg)
+
+        self.num_evaluation = len(self.post_processor)
+
         self.loss_evaluator = make_roi_box_loss_evaluator(cfg)
-        # self.loss_evaluator_fc = make_roi_box_loss_evaluator(cfg)
 
         conv_fc_threshold = cfg.MODEL.ROI_BOX_HEAD.CONV_FC_THRESHOLD
         self.map_proposal_threshold=ProposalMapper(conv_fc_threshold)
 
         mask_loss = cfg.MODEL.ROI_BOX_HEAD.MASK_LOSS
+
         self.conv_cls_weight = mask_loss[0]
         self.conv_reg_weight = mask_loss[1]
         self.fc_cls_weight = mask_loss[2]
         self.fc_reg_weight = mask_loss[3]
+
+        # self.evaluation_flags = cfg.TEST.EVALUATION_FLAGS
 
     def forward(self, features, proposals, targets=None):
         """
@@ -86,20 +90,21 @@ class ROIBoxHead(torch.nn.Module):
 
             ## combine two results based on the level
             dtype, device = class_logits.dtype, class_logits.device
-            class_logits_combine = torch.zeros(
-                class_logits.shape,
-                dtype=dtype,
-                device=device,
-            )
-            box_regression_combine = torch.zeros(
-                box_regression.shape,
-                dtype=dtype,
-                device=device,
-            )
+            # class_logits_combine = torch.zeros(
+            #     class_logits.shape,
+            #     dtype=dtype,
+            #     device=device,
+            # )
+            # box_regression_combine = torch.zeros(
+            #     box_regression.shape,
+            #     dtype=dtype,
+            #     device=device,
+            # )
 
             ## 0 1 from fc
             ## 2 3 from conv
-            idx_conv, idx_fc = self.map_proposal_threshold(proposals)
+            #### find index for some thresholds, depreciated 
+            ### idx_conv, idx_fc = self.map_proposal_threshold(proposals)
             # print (idx_conv.shape)
             # print (idx_fc.shape)
             # exit()
@@ -111,8 +116,8 @@ class ROIBoxHead(torch.nn.Module):
 
 
             ## cls from fc, reg from conv
-            class_logits_combine   = class_logits_fc
-            box_regression_combine = box_regression
+            # class_logits_combine   = class_logits_fc
+            # box_regression_combine = box_regression
 
             ## get 
             #$ class_logits_combine[idx_conv]   = class_logits[idx_conv]
@@ -137,8 +142,12 @@ class ROIBoxHead(torch.nn.Module):
             ## results from fc
             # result = self.post_processor((class_logits_fc, box_regression_fc), proposals)
             ## results from conv + fc
-            result = self.post_processor((class_logits_combine, box_regression_combine), proposals)
-            # print (result)
+            # result = self.post_processor((class_logits_combine, box_regression_combine), proposals)
+            result = []
+            for i in range(self.num_evaluation):
+                result_ = self.post_processor[i]((class_logits, box_regression, class_logits_fc, box_regression_fc), proposals)
+                result.append(result_)
+            # print (len(result))
             # exit()
             return x, result, {}
 

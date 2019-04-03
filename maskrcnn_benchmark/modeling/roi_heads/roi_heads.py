@@ -54,6 +54,7 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             losses.update(loss_keypoint)
         # print (x)
         # print (detections)
+        # print (detections)
         # print (losses)
         # exit()
         return x, detections, losses

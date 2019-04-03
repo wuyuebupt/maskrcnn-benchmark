@@ -22,7 +22,8 @@ class PostProcessor(nn.Module):
         nms=0.5,
         detections_per_img=100,
         box_coder=None,
-        cls_agnostic_bbox_reg=False
+        cls_agnostic_bbox_reg=False,
+        mode = 2
     ):
         """
         Arguments:
@@ -40,6 +41,8 @@ class PostProcessor(nn.Module):
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
 
+        self.mode = mode
+
     def forward(self, x, boxes):
         """
         Arguments:
@@ -52,8 +55,41 @@ class PostProcessor(nn.Module):
             results (list[BoxList]): one BoxList for each image, containing
                 the extra fields labels and scores
         """
-        class_logits, box_regression = x
-        class_prob = F.softmax(class_logits, -1)
+        # class_logits, box_regression = x
+        # class_prob = F.softmax(class_logits, -1)
+        class_logits_conv, box_regression_conv,  class_logits_fc, box_regression_fc = x
+        class_prob_conv = F.softmax(class_logits_conv, -1)
+        class_prob_fc = F.softmax(class_logits_fc, -1)
+
+        # 0 : conv cls + conv reg
+        # 1 : fc cls + fc cls
+        # 2 : fc cls + conv reg
+        # 3 : fc cls + conv reg (in posterior bayesian manner)
+        class_prob = class_prob_fc
+        box_regression = box_regression_conv
+
+        if self.mode == 0:
+            class_prob = class_prob_conv
+            box_regression = box_regression_conv
+
+        if self.mode == 1:
+            class_prob = class_prob_fc
+            box_regression = box_regression_fc
+
+        if self.mode == 2:
+            class_prob = class_prob_fc
+            box_regression = box_regression_conv
+
+        if self.mode == 3:
+            class_prob = 1 - (1 - class_prob_conv) * (1 - class_prob_fc)
+            box_regression = box_regression_conv
+
+        # class_prob_conv = F.softmax(class_logits_conv, -1)
+        # class_prob_fc = F.softmax(class_logits_fc, -1)
+        # class_prob = (class_prob_conv + class_prob_fc) / 2
+        # class_prob = 1 - (1 - class_prob_conv) * (1 - class_prob_fc)
+        # class_prob = class_prob_fc
+
 
         # TODO think about a representation of batch of boxes
         image_shapes = [box.size for box in boxes]
@@ -157,11 +193,32 @@ def make_roi_box_post_processor(cfg):
     detections_per_img = cfg.MODEL.ROI_HEADS.DETECTIONS_PER_IMG
     cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
 
-    postprocessor = PostProcessor(
-        score_thresh,
-        nms_thresh,
-        detections_per_img,
-        box_coder,
-        cls_agnostic_bbox_reg
-    )
+    evaluation_flags = cfg.TEST.EVALUATION_FLAGS
+
+    #### return multiple post processor with different mode
+    # 0 : conv cls + conv reg
+    # 1 : fc cls + fc cls
+    # 2 : fc cls + conv reg
+    # 3 : fc cls + conv reg (in posterior bayesian manner)
+    #------
+    # evaluation_flags: 1 1 1 1
+
+    postprocessor = []
+    for i, value in enumerate(evaluation_flags):
+        print (i, value)
+        if value == 1:
+            postprocessor_ = PostProcessor(
+                score_thresh,
+                nms_thresh,
+                detections_per_img,
+                box_coder,
+                cls_agnostic_bbox_reg,
+                mode = i
+            )      
+            postprocessor.append(postprocessor_)
+
+    # print (len(postprocessor))
+    assert (len(postprocessor) > 0)        
+    # exit()
+
     return postprocessor
