@@ -1,7 +1,7 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
 export NGPUS=4
-export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v15/
+export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/double-head/fpn50-1x-dh-b12-back256-conv-only-Ys300g4-c1024x512-112x224x448-m10-wc10x10-f00x00-sc2-input-1553303475036_3797/
 
 ### for images/gpu = 1
 ### Resnet 50, C4
@@ -62,12 +62,12 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --pretrained-model $PRETRAIN_MODEL \
 --data-dir ../maskrcnn-benchmark-file/datasets/ \
 --config-file $CONFIG_YAML \
---nonlocal-cls-num-group 2 \
+--nonlocal-cls-num-group 4 \
 --nonlocal-cls-num-stack 0 \
---nonlocal-reg-num-group 2 \
+--nonlocal-reg-num-group 4 \
 --nonlocal-reg-num-stack 0 \
 --nonlocal-shared-num-group 4 \
---nonlocal-shared-num-stack 1 \
+--nonlocal-shared-num-stack 3 \
 --nonlocal-use-bn True \
 --nonlocal-use-relu True \
 --nonlocal-use-softmax False \
@@ -82,9 +82,9 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --mask-fc 1 1 1 1 \
 --maplevel-conv 0 112 224 448 100000 \
 --mask-conv 1 1 1 1 \
---mask-loss 0.5 0.5 0.5 0.5 \
---stop-gradient 1 0 1 0 \
---evaluation-flags 0 1 1 1 \
+--mask-loss 0.4 1.6 0.0 0.0 \
+--stop-gradient 1 1 1 1 \
+--evaluation-flags 1 1 1 1 \
 --lr-steps 100 200 300
 # --lr-steps 120000 160000 180000
 
