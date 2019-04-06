@@ -37,8 +37,8 @@ def compute_on_dataset(model, data_loader, device):
             results_dict_list[j].update(
                 {img_id: result for img_id, result in zip(image_ids, out)}
             )
-        if i == 10:
-            break
+        # if i == 10:
+        #     break
     ## remove empty dicts
     results_dict_list_ = []
     for results_dict in results_dict_list:
