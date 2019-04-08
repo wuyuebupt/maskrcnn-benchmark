@@ -85,6 +85,7 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --mask-loss 0.4 1.6 0.0 0.0 \
 --stop-gradient 1 1 1 1 \
 --evaluation-flags 1 1 1 1 \
+--sigmoid True \
 --lr-steps 100 200 300
 # --lr-steps 120000 160000 180000
 

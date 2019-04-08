@@ -23,6 +23,7 @@ class PostProcessor(nn.Module):
         detections_per_img=100,
         box_coder=None,
         cls_agnostic_bbox_reg=False,
+        use_sigmoid=False,
         mode = 2
     ):
         """
@@ -40,6 +41,7 @@ class PostProcessor(nn.Module):
             box_coder = BoxCoder(weights=(10., 10., 5., 5.))
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
+        self.use_sigmoid = use_sigmoid
 
         self.mode = mode
 
@@ -58,8 +60,13 @@ class PostProcessor(nn.Module):
         # class_logits, box_regression = x
         # class_prob = F.softmax(class_logits, -1)
         class_logits_conv, box_regression_conv,  class_logits_fc, box_regression_fc = x
-        class_prob_conv = F.softmax(class_logits_conv, -1)
-        class_prob_fc = F.softmax(class_logits_fc, -1)
+
+        if self.use_sigmoid:
+            class_prob_conv = F.sigmoid(class_logits_conv)
+            class_prob_fc = F.sigmoid(class_logits_fc)
+        else:
+            class_prob_conv = F.softmax(class_logits_conv, -1)
+            class_prob_fc = F.softmax(class_logits_fc, -1)
 
         # 0 : conv cls + conv reg
         # 1 : fc cls + fc cls
@@ -194,6 +201,7 @@ def make_roi_box_post_processor(cfg):
     cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
 
     evaluation_flags = cfg.TEST.EVALUATION_FLAGS
+    use_sigmoid = cfg.MODEL.USE_SIGMOID
 
     #### return multiple post processor with different mode
     # 0 : conv cls + conv reg
@@ -213,6 +221,7 @@ def make_roi_box_post_processor(cfg):
                 detections_per_img,
                 box_coder,
                 cls_agnostic_bbox_reg,
+                use_sigmoid,
                 mode = i
             )      
             postprocessor.append(postprocessor_)

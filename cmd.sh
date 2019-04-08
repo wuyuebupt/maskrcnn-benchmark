@@ -1,6 +1,6 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
-export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v15/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v16/
 
 ### Resnet 50, C4
 # export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_50_C4_1x_neighbor.yaml
@@ -57,8 +57,10 @@ python  tools/train_net.py \
 --conv-fc-threshold 224 \
 --lr-steps 100 200 300 \
 --stop-gradient 1 0 1 0 \
+--use-sigmoid True \
 --evaluation-flags 0 1 1 1
 
+# --use-sigmoid False \
 ###### --stop-gradient
 # conv cls
 # conv reg

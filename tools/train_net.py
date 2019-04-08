@@ -261,6 +261,15 @@ def main():
         metavar="True",
         type=str,
     )
+
+    parser.add_argument(
+        "--use-sigmoid",
+        default="False",
+        help="softmax with sigmoid",
+        metavar="False",
+        type=str,
+    )
+
     parser.add_argument(
         "--conv-bbox-expand",
         default="1.0",
@@ -409,6 +418,7 @@ def main():
     print (args.lr_steps)
     print (args.stop_gradient)
     print (args.evaluation_flags)
+    print (args.use_sigmoid)
 
     cfg.DATA_DIR = args.data_dir
     cfg.OUTPUT_DIR = args.output_dir
@@ -445,6 +455,7 @@ def main():
     # double heads
     cfg.MODEL.ROI_BOX_HEAD.LOSS_STOP_GRADIENT = args.stop_gradient
     cfg.TEST.EVALUATION_FLAGS = args.evaluation_flags
+    cfg.MODEL.USE_SIGMOID = ast.literal_eval(args.use_sigmoid)
 
 
     ## for lr

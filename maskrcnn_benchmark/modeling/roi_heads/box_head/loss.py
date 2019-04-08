@@ -25,7 +25,8 @@ class FastRCNNLossComputation(object):
         proposal_matcher, 
         fg_bg_sampler, 
         box_coder, 
-        cls_agnostic_bbox_reg=False
+        cls_agnostic_bbox_reg=False,
+        use_sigmoid = False,
     ):
         """
         Arguments:
@@ -37,6 +38,7 @@ class FastRCNNLossComputation(object):
         self.fg_bg_sampler = fg_bg_sampler
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
+        self.use_sigmoid = use_sigmoid
 
     def match_targets_to_proposals(self, proposal, target):
         match_quality_matrix = boxlist_iou(target, proposal)
@@ -117,6 +119,33 @@ class FastRCNNLossComputation(object):
         self._proposals = proposals
         return proposals
 
+    def make_one_hot(self,labels, C=2):
+        '''
+        Converts an integer label torch.autograd.Variable to a one-hot Variable.
+        
+        Parameters
+        ----------
+        labels : torch.autograd.Variable of torch.cuda.LongTensor
+            N x 1 , where N is batch size. 
+            Each value is an integer representing correct classification.
+            C : integer. 
+            number of classes in labels.
+        
+        Returns
+        -------
+        target : torch.autograd.Variable of torch.cuda.FloatTensor
+            N x C , where C is class number. One-hot encoded.
+        '''
+        labels = labels.view(labels.size(0), 1)
+        one_hot = torch.cuda.FloatTensor(labels.size(0), C).zero_()
+        # print (one_hot.shape)
+        # print (labels.shape)
+        target = one_hot.scatter_(1, labels.data, 1)
+        
+        # target = Variable(target)
+            
+        return target
+
     def __call__(self, class_logits, box_regression, mask):
         """
         Computes the loss for Faster R-CNN.
@@ -150,13 +179,37 @@ class FastRCNNLossComputation(object):
 
         # print (class_logits.shape)
         # print (labels.shape)
-        classification_loss = F.cross_entropy(class_logits, labels, reduce=False)
+        if self.use_sigmoid:
+            labels_onehot = self.make_one_hot(labels, 81)
+            # labels_onehot = labels.view(labels.size(0), 1)
+            classification_loss = F.binary_cross_entropy_with_logits(class_logits, labels_onehot)
+            # classification_loss = F.binary_cross_entropy_with_logits(class_logits, labels_onehot, reduce=False)
+            # classification_loss = F.binary_cross_entropy_with_logits(class_logits, labels_onehot, size_average=False, reduce=False)
+            # classification_loss = F.binary_cross_entropy_with_logits(class_logits, labels_onehot, size_average=False, reduce=False)
+            # classification_loss = F.binary_cross_entropy_with_logits(class_logits, labels, reduce=False)
+            # classification_loss = torch.nn.MultiLabelSoftMarginLoss(class_logits, labels, reduce=False)
+        else:
+            classification_loss = F.cross_entropy(class_logits, labels)
+            # classification_loss = F.cross_entropy(class_logits, labels, reduce=False)
+            # classification_loss_mask = classification_loss * mask.to(torch.float)
+            # classification_loss_mask_ = torch.sum(classification_loss_mask) / classification_loss_mask.numel()
+
+
+        # print (classification_loss.shape)
+        # # print (classification_loss)
+        # print (mask.shape)
+        # classification_loss_mask = classification_loss * mask.to(torch.float)
+        # classification_loss_mask_ = torch.sum(classification_loss_mask) / classification_loss_mask.numel()
+        # exit()
+        ### cls loss with mask
+        # classification_loss = F.cross_entropy(class_logits, labels, reduce=False)
+        # classification_loss = F.cross_entropy(class_logits, labels, reduce=False)
         # print (classification_loss)
         # print (classification_loss.shape)
-        classification_loss_mask = classification_loss * mask.to(torch.float)
+        # classification_loss_mask = classification_loss * mask.to(torch.float)
         # classification_loss_mask = classification_loss * mask.to(torch.cuda.FloatTensor)
         # print (classification_loss_mask)
-        classification_loss_mask_ = torch.sum(classification_loss_mask) / classification_loss_mask.numel()
+        # classification_loss_mask_ = torch.sum(classification_loss_mask) / classification_loss_mask.numel()
         # classification_loss_mask_ = torch.sum(classification_loss_mask) / (torch.sum(mask) + 1e-6)
         # print (classification_loss_mask_)
         # print (mask)
@@ -224,7 +277,8 @@ class FastRCNNLossComputation(object):
         # classification_loss_mask_ = classification_loss_mask_ * 0.5
         # box_loss = box_loss * 0.5
 
-        return classification_loss_mask_, box_loss
+        return classification_loss, box_loss
+        # return classification_loss_mask_, box_loss
 
 
 def make_roi_box_loss_evaluator(cfg):
@@ -242,12 +296,14 @@ def make_roi_box_loss_evaluator(cfg):
     )
 
     cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
+    use_sigmoid = cfg.MODEL.USE_SIGMOID
 
     loss_evaluator = FastRCNNLossComputation(
         matcher, 
         fg_bg_sampler, 
         box_coder, 
-        cls_agnostic_bbox_reg
+        cls_agnostic_bbox_reg,
+        use_sigmoid
     )
 
     return loss_evaluator
