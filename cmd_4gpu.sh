@@ -1,7 +1,8 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
 export NGPUS=4
-export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/double-head/fpn50-1x-dh-b12-back256-conv-only-Ys300g4-c1024x512-112x224x448-m10-wc10x10-f00x00-sc2-input-1553303475036_3797/
+# export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/double-head/fpn50-1x-dh-b12-back256-conv-only-Ys300g4-c1024x512-112x224x448-m10-wc10x10-f00x00-sc2-input-1553303475036_3797/
+export OUTPUT_DIR=../model_output_tmp_v16
 
 ### for images/gpu = 1
 ### Resnet 50, C4
@@ -85,7 +86,7 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --mask-loss 0.4 1.6 0.0 0.0 \
 --stop-gradient 1 1 1 1 \
 --evaluation-flags 1 1 1 1 \
---sigmoid True \
+--use-sigmoid True \
 --lr-steps 100 200 300
 # --lr-steps 120000 160000 180000
 
