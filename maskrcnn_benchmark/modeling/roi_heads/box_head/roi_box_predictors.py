@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 from maskrcnn_benchmark.modeling import registry
 from torch import nn
+import torch
 
 from maskrcnn_benchmark.layers import Conv2d
 import torch.nn.functional as F
@@ -103,6 +104,7 @@ class FPNPredictorNeighbor(nn.Module):
         representation_size = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
         # representation_size = cfg.MODEL.BACKBONE.OUT_CHANNELS
 
+        ## fc layer
         self.cls_score = nn.Linear(representation_size, num_classes)
         num_bbox_reg_classes = 2 if cfg.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
         self.bbox_pred = nn.Linear(representation_size, num_bbox_reg_classes * 4)
@@ -123,6 +125,15 @@ class FPNPredictorNeighbor(nn.Module):
         nn.init.normal_(self.bbox_pred_fc.weight, std=0.001)
         for l in [self.cls_score_fc, self.bbox_pred_fc]:
             nn.init.constant_(l.bias, 0)
+
+        ## conv fc fusion
+        self.use_head_fusion = cfg.MODEL.ROI_BOX_HEAD.HEAD_FUSION
+        if self.use_head_fusion == True:
+            self.head_fusion = nn.Linear(num_classes*2, num_classes) 
+            nn.init.normal_(self.head_fusion.weight, std=0.01)
+            for l in [self.head_fusion]:
+                nn.init.constant_(l.bias, 0)
+        
 
     def forward(self, x):
         ## detach the variable if nacessary
@@ -173,7 +184,21 @@ class FPNPredictorNeighbor(nn.Module):
         # scores_fc = self.cls_score_fc(x[2])
         # bbox_deltas_fc = self.bbox_pred_fc(x[2])
 
-        return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[3], x[4]
+        ## check if fusion or not, if not, keep original return
+        if self.use_head_fusion == True:
+            # print (scores.shape)
+            # print (scores_fc.shape)
+
+            scores_concat = torch.cat((scores, scores_fc), dim=1)
+
+            # print (scores_concat.shape)
+            scores_fusion = self.head_fusion(scores_concat)
+            # print (scores_fusion.shape)
+            
+            # exit()
+            return scores, bbox_deltas, scores_fc, bbox_deltas_fc, scores_fusion, x[3], x[4]
+        else:
+            return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[3], x[4]
 
 
 

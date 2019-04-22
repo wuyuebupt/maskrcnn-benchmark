@@ -248,6 +248,14 @@ def main():
     )
 
     parser.add_argument(
+        "--head-fusion",
+        default="True",
+        help="an extra fc to fuse two results",
+        metavar="True",
+        type=str,
+    )
+
+    parser.add_argument(
         "--nonlocal-use-ffconv",
         default="True",
         help="nonlocal use ffconv after nonlocal with residual",
@@ -358,7 +366,7 @@ def main():
         # default=[0, 3],
         default=[],
         help="model code for evaluation flags",
-        metavar="1 1 1 1",
+        metavar="1 1 1 1 1",
         type=int,
     )
 
@@ -409,6 +417,7 @@ def main():
     print (args.lr_steps)
     print (args.stop_gradient)
     print (args.evaluation_flags)
+    print (args.head_fusion)
 
     cfg.DATA_DIR = args.data_dir
     cfg.OUTPUT_DIR = args.output_dir
@@ -439,6 +448,8 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.POOLER_MASK_FC = args.mask_fc
     cfg.MODEL.ROI_BOX_HEAD.MASK_LOSS = args.mask_loss
     cfg.MODEL.ROI_BOX_HEAD.CONV_FC_THRESHOLD = args.conv_fc_threshold
+
+    cfg.MODEL.ROI_BOX_HEAD.HEAD_FUSION = ast.literal_eval(args.head_fusion)
 
     cfg.MODEL.BACKBONE.OUT_CHANNELS = args.backbone_out_channels
 
