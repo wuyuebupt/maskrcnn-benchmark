@@ -128,8 +128,14 @@ class FPNPredictorNeighbor(nn.Module):
 
         ## conv fc fusion
         self.use_head_fusion = cfg.MODEL.ROI_BOX_HEAD.HEAD_FUSION
+        self.use_head_fusion_feature = cfg.MODEL.ROI_BOX_HEAD.HEAD_FUSION_FEATURE
         if self.use_head_fusion == True:
-            self.head_fusion = nn.Linear(num_classes*2, num_classes) 
+
+            if self.use_head_fusion_feature == True:    
+                self.head_fusion = nn.Linear(num_classes*2, num_classes) 
+            else:
+                self.head_fusion = nn.Linear(representation_size*2, num_classes) 
+
             nn.init.normal_(self.head_fusion.weight, std=0.01)
             for l in [self.head_fusion]:
                 nn.init.constant_(l.bias, 0)
@@ -140,6 +146,7 @@ class FPNPredictorNeighbor(nn.Module):
         ## detach can not be in-place
 
         ## conv cls
+        x_conv_cls_identity =  x[0]
         if self.loss_stop_gradient[0] == 0:
             x_conv_cls = x[0].detach()
             scores = self.cls_score(x_conv_cls)
@@ -188,8 +195,12 @@ class FPNPredictorNeighbor(nn.Module):
         if self.use_head_fusion == True:
             # print (scores.shape)
             # print (scores_fc.shape)
+            
+            if self.use_head_fusion_feature == True:
+                scores_concat = torch.cat((scores, scores_fc), dim=1)
+            else:
+                scores_concat = torch.cat((x_conv_cls_identity, x_fc_cls), dim=1)
 
-            scores_concat = torch.cat((scores, scores_fc), dim=1)
 
             # print (scores_concat.shape)
             scores_fusion = self.head_fusion(scores_concat)

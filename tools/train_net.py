@@ -248,6 +248,15 @@ def main():
     )
 
     parser.add_argument(
+        "--head-fusion-feature",
+        default="True",
+        help="an extra fc to fuse two results",
+        metavar="True",
+        type=str,
+    )
+
+
+    parser.add_argument(
         "--head-fusion",
         default="True",
         help="an extra fc to fuse two results",
@@ -418,6 +427,7 @@ def main():
     print (args.stop_gradient)
     print (args.evaluation_flags)
     print (args.head_fusion)
+    print (args.head_fusion_feature)
 
     cfg.DATA_DIR = args.data_dir
     cfg.OUTPUT_DIR = args.output_dir
@@ -450,6 +460,7 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.CONV_FC_THRESHOLD = args.conv_fc_threshold
 
     cfg.MODEL.ROI_BOX_HEAD.HEAD_FUSION = ast.literal_eval(args.head_fusion)
+    cfg.MODEL.ROI_BOX_HEAD.HEAD_FUSION_FEATURE = ast.literal_eval(args.head_fusion_feature)
 
     cfg.MODEL.BACKBONE.OUT_CHANNELS = args.backbone_out_channels
 
