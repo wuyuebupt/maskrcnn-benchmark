@@ -280,6 +280,10 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         self.fc6 = make_fc(input_size, representation_size, use_gn)
         self.fc7 = make_fc(representation_size, representation_size, use_gn)
 
+        ## iou
+        self.iou_fc6 = make_fc(input_size, representation_size, use_gn)
+        self.iou_fc7 = make_fc(representation_size, representation_size, use_gn)
+
     def forward(self, x, proposals):
         x_conv = x
         x_fc = x
@@ -290,6 +294,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
 
 
         identity = x_fc
+        identity_iou = x_fc
         ### model Y
         x_conv =  self.nonlocal_conv(x_conv)
         ## shared
@@ -315,7 +320,12 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         identity = F.relu(self.fc6(identity))
         identity = F.relu(self.fc7(identity))
 
-        return tuple((x_cls, x_reg, identity, mask, mask_fc))
+        ### IoU
+        identity_iou = identity_iou.view(identity_iou.size(0), -1)
+        identity_iou = F.relu(self.iou_fc6(identity_iou))
+        identity_iou = F.relu(self.iou_fc7(identity_iou))
+
+        return tuple((x_cls, x_reg, identity, mask, mask_fc, identity_iou))
 
 
 

@@ -6,6 +6,7 @@ from maskrcnn_benchmark.layers import smooth_l1_loss
 from maskrcnn_benchmark.layers.smooth_l1_loss import smooth_l1_loss_mask
 # from maskrcnn_benchmark.layers import smooth_l1_loss_mask
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
+from maskrcnn_benchmark.modeling.iou_coder import IoUCoder
 from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 from maskrcnn_benchmark.modeling.balanced_positive_negative_sampler import (
@@ -25,6 +26,7 @@ class FastRCNNLossComputation(object):
         proposal_matcher, 
         fg_bg_sampler, 
         box_coder, 
+        iou_coder, 
         cls_agnostic_bbox_reg=False
     ):
         """
@@ -36,6 +38,7 @@ class FastRCNNLossComputation(object):
         self.proposal_matcher = proposal_matcher
         self.fg_bg_sampler = fg_bg_sampler
         self.box_coder = box_coder
+        self.iou_coder = iou_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
 
     def match_targets_to_proposals(self, proposal, target):
@@ -54,6 +57,7 @@ class FastRCNNLossComputation(object):
     def prepare_targets(self, proposals, targets):
         labels = []
         regression_targets = []
+        iou_targets = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
             matched_targets = self.match_targets_to_proposals(
                 proposals_per_image, targets_per_image
@@ -76,10 +80,24 @@ class FastRCNNLossComputation(object):
                 matched_targets.bbox, proposals_per_image.bbox
             )
 
+            # print (regression_targets_per_image)
+            # print (regression_targets_per_image.shape)
+
+            iou_targets_per_image = self.iou_coder.encode(
+                matched_targets.bbox, proposals_per_image.bbox
+            )
+            # print (iou_targets_per_image)
+            # print (iou_targets_per_image.shape)
+            # exit()
+            # regression_targets_per_image = self.box_coder.encode(
+            #     matched_targets.bbox, proposals_per_image.bbox
+            # )
+
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
+            iou_targets.append(iou_targets_per_image)
 
-        return labels, regression_targets
+        return labels, regression_targets, iou_targets
 
     def subsample(self, proposals, targets):
         """
@@ -92,17 +110,21 @@ class FastRCNNLossComputation(object):
             targets (list[BoxList])
         """
 
-        labels, regression_targets = self.prepare_targets(proposals, targets)
+        # labels, regression_targets = self.prepare_targets(proposals, targets)
+        labels, regression_targets, iou_targets = self.prepare_targets(proposals, targets)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
 
         proposals = list(proposals)
         # add corresponding label and regression_targets information to the bounding boxes
-        for labels_per_image, regression_targets_per_image, proposals_per_image in zip(
-            labels, regression_targets, proposals
+        for labels_per_image, regression_targets_per_image, iou_targets_per_image,  proposals_per_image in zip(
+            labels, regression_targets, iou_targets, proposals
         ):
             proposals_per_image.add_field("labels", labels_per_image)
             proposals_per_image.add_field(
                 "regression_targets", regression_targets_per_image
+            )
+            proposals_per_image.add_field(
+                "iou_targets", iou_targets_per_image
             )
 
         # distributed sampled proposals, that were obtained on all feature maps
@@ -117,7 +139,7 @@ class FastRCNNLossComputation(object):
         self._proposals = proposals
         return proposals
 
-    def __call__(self, class_logits, box_regression, mask):
+    def __call__(self, class_logits, box_regression, mask, iou_regression):
         """
         Computes the loss for Faster R-CNN.
         This requires that the subsample method has been called beforehand.
@@ -134,6 +156,7 @@ class FastRCNNLossComputation(object):
 
         class_logits = cat(class_logits, dim=0)
         box_regression = cat(box_regression, dim=0)
+        iou_regression = cat(iou_regression, dim=0)
         mask = cat(mask, dim=0)
 
         device = class_logits.device
@@ -147,6 +170,13 @@ class FastRCNNLossComputation(object):
         regression_targets = cat(
             [proposal.get_field("regression_targets") for proposal in proposals], dim=0
         )
+        iou_targets = cat(
+            [proposal.get_field("iou_targets") for proposal in proposals], dim=0
+        )
+
+        # print (iou_targets)
+        # print (iou_targets.shape)
+        # exit()
 
         # print (class_logits.shape)
         # print (labels.shape)
@@ -189,6 +219,11 @@ class FastRCNNLossComputation(object):
             map_inds = 4 * labels_pos[:, None] + torch.tensor(
                 [0, 1, 2, 3], device=device)
 
+        ## iou map
+        map_inds_iou = labels_pos[:, None] # + torch.tensor([0], device=device)
+
+
+
         # print (map_inds)
         # print (sampled_pos_inds_subset)
         # print (box_regression.shape)
@@ -211,6 +246,21 @@ class FastRCNNLossComputation(object):
         # print (box_loss)
         # exit()
 
+        ## iou loss
+        # print (iou_regression[sampled_pos_inds_subset].shape)
+        # print (iou_targets[sampled_pos_inds_subset].shape)
+        # print (iou_regression[sampled_pos_inds_subset[:, None], map_inds_iou].shape)
+        # print (iou_targets[sampled_pos_inds_subset].shape)
+        iou_loss = smooth_l1_loss(
+            iou_regression[sampled_pos_inds_subset[:, None], map_inds_iou],
+            iou_targets[sampled_pos_inds_subset],
+            size_average=False,
+            beta=1,
+        )
+        # print (box_loss)
+        # iou_loss = iou_loss / labels.numel()
+
+
 
         # print (box_loss)
         # print (labels.numel())
@@ -224,7 +274,7 @@ class FastRCNNLossComputation(object):
         # classification_loss_mask_ = classification_loss_mask_ * 0.5
         # box_loss = box_loss * 0.5
 
-        return classification_loss_mask_, box_loss
+        return classification_loss_mask_, box_loss, iou_loss
 
 
 def make_roi_box_loss_evaluator(cfg):
@@ -237,6 +287,8 @@ def make_roi_box_loss_evaluator(cfg):
     bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
     box_coder = BoxCoder(weights=bbox_reg_weights)
 
+    iou_coder = IoUCoder()
+
     fg_bg_sampler = BalancedPositiveNegativeSampler(
         cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE, cfg.MODEL.ROI_HEADS.POSITIVE_FRACTION
     )
@@ -247,6 +299,7 @@ def make_roi_box_loss_evaluator(cfg):
         matcher, 
         fg_bg_sampler, 
         box_coder, 
+        iou_coder, 
         cls_agnostic_bbox_reg
     )
 

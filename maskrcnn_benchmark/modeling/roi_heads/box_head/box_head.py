@@ -47,6 +47,7 @@ class ROIBoxHead(torch.nn.Module):
         self.conv_reg_weight = mask_loss[1]
         self.fc_cls_weight = mask_loss[2]
         self.fc_reg_weight = mask_loss[3]
+        self.iou_weight = mask_loss[4]
 
         # self.evaluation_flags = cfg.TEST.EVALUATION_FLAGS
 
@@ -76,7 +77,7 @@ class ROIBoxHead(torch.nn.Module):
         x = self.feature_extractor(features, proposals)
         # final classifier that converts the features into predictions
         # class_logits, box_regression = self.predictor(x)
-        class_logits, box_regression, class_logits_fc, box_regression_fc, mask, mask_fc = self.predictor(x)
+        class_logits, box_regression, class_logits_fc, box_regression_fc, mask, mask_fc, iou_regression = self.predictor(x)
 
         if not self.training:
             # print (class_logits.shape)
@@ -145,18 +146,19 @@ class ROIBoxHead(torch.nn.Module):
             # result = self.post_processor((class_logits_combine, box_regression_combine), proposals)
             result = []
             for i in range(self.num_evaluation):
-                result_ = self.post_processor[i]((class_logits, box_regression, class_logits_fc, box_regression_fc), proposals)
+                result_ = self.post_processor[i]((class_logits, box_regression, class_logits_fc, box_regression_fc, iou_regression), proposals)
+                # result_ = self.post_processor[i]((class_logits, box_regression, class_logits_fc, box_regression_fc), proposals)
                 result.append(result_)
             # print (len(result))
             # exit()
             return x, result, {}
 
-        loss_classifier, loss_box_reg = self.loss_evaluator(
-            [class_logits], [box_regression], [mask]
+        loss_classifier, loss_box_reg, loss_iou_ = self.loss_evaluator(
+            [class_logits], [box_regression], [mask], [iou_regression]
         )
 
-        loss_classifier_fc, loss_box_reg_fc = self.loss_evaluator(
-            [class_logits_fc], [box_regression_fc], [mask_fc]
+        loss_classifier_fc, loss_box_reg_fc, loss_iou = self.loss_evaluator(
+            [class_logits_fc], [box_regression_fc], [mask_fc], [iou_regression]
         )
 
         ## loss weights
@@ -168,6 +170,7 @@ class ROIBoxHead(torch.nn.Module):
         loss_box_reg = loss_box_reg * self.conv_reg_weight
         loss_classifier_fc = loss_classifier_fc * self.fc_cls_weight
         loss_box_reg_fc = loss_box_reg_fc * self.fc_reg_weight
+        loss_iou = loss_iou * self.iou_weight
         # print (loss_classifier)
         # print (loss_box_reg)
         # print (loss_classifier_fc)
@@ -178,7 +181,7 @@ class ROIBoxHead(torch.nn.Module):
         return (
             x,
             proposals,
-            dict(loss_classifier=loss_classifier, loss_box_reg=loss_box_reg, loss_classifier_fc=loss_classifier_fc, loss_box_reg_fc=loss_box_reg_fc)
+            dict(loss_classifier=loss_classifier, loss_box_reg=loss_box_reg, loss_classifier_fc=loss_classifier_fc, loss_box_reg_fc=loss_box_reg_fc, loss_iou=loss_iou)
         )
 
 

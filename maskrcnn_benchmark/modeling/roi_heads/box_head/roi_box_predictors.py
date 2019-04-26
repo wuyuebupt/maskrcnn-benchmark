@@ -124,6 +124,15 @@ class FPNPredictorNeighbor(nn.Module):
         for l in [self.cls_score_fc, self.bbox_pred_fc]:
             nn.init.constant_(l.bias, 0)
 
+        ## iou branch
+        # self.iou_fc = nn.Linear(representation_size_fc, 1)
+        ## class specific
+        self.iou_fc = nn.Linear(representation_size_fc, num_classes)
+
+        nn.init.normal_(self.iou_fc.weight, std=0.001)
+        for l in [self.iou_fc]:
+            nn.init.constant_(l.bias, 0)
+
     def forward(self, x):
         ## detach the variable if nacessary
         ## detach can not be in-place
@@ -173,7 +182,11 @@ class FPNPredictorNeighbor(nn.Module):
         # scores_fc = self.cls_score_fc(x[2])
         # bbox_deltas_fc = self.bbox_pred_fc(x[2])
 
-        return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[3], x[4]
+        ## iou regression
+        iou_regression = self.iou_fc(x[5])
+        iou_regression = F.sigmoid(iou_regression)
+
+        return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[3], x[4], iou_regression
 
 
 

@@ -57,7 +57,8 @@ class PostProcessor(nn.Module):
         """
         # class_logits, box_regression = x
         # class_prob = F.softmax(class_logits, -1)
-        class_logits_conv, box_regression_conv,  class_logits_fc, box_regression_fc = x
+        # class_logits_conv, box_regression_conv,  class_logits_fc, box_regression_fc = x
+        class_logits_conv, box_regression_conv,  class_logits_fc, box_regression_fc, iou_regression = x
         class_prob_conv = F.softmax(class_logits_conv, -1)
         class_prob_fc = F.softmax(class_logits_fc, -1)
 
@@ -83,6 +84,20 @@ class PostProcessor(nn.Module):
         if self.mode == 3:
             class_prob = 1 - (1 - class_prob_conv) * (1 - class_prob_fc)
             box_regression = box_regression_conv
+
+        ## iou related
+        if self.mode == 4:
+            # print (class_prob_conv.shape)
+            # print (iou_regression.shape)
+            class_prob = class_prob_conv * iou_regression 
+            # print (class_prob.shape)
+            box_regression = box_regression_conv
+
+        # if self.mode == 5:
+        #     class_prob = 1 - (1 - class_prob_conv) * (1-iou_regression)
+        #     box_regression = box_regression_conv
+
+
 
         # class_prob_conv = F.softmax(class_logits_conv, -1)
         # class_prob_fc = F.softmax(class_logits_fc, -1)
@@ -200,6 +215,7 @@ def make_roi_box_post_processor(cfg):
     # 1 : fc cls + fc cls
     # 2 : fc cls + conv reg
     # 3 : fc cls + conv reg (in posterior bayesian manner)
+    # 4 : with iou ?
     #------
     # evaluation_flags: 1 1 1 1
 

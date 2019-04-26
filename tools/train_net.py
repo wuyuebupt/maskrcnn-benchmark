@@ -324,7 +324,7 @@ def main():
         nargs = '*',
         default=[],
         help="model code for each mask",
-        metavar="1 1 1 1",
+        metavar="1 1 1 1 1",
         type=float,
     )
     parser.add_argument(
