@@ -258,7 +258,7 @@ class FastRCNNLossComputation(object):
             beta=1,
         )
         # print (box_loss)
-        # iou_loss = iou_loss / labels.numel()
+        iou_loss = iou_loss / labels.numel()
 
 
 

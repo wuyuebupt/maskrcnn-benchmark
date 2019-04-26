@@ -84,7 +84,7 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --mask-fc 1 1 1 1 \
 --maplevel-conv 0 112 224 448 100000 \
 --mask-conv 1 1 1 1 \
---mask-loss 0.4 1.6 1.6 0.4 0.01 \
+--mask-loss 0.4 1.6 1.6 0.4 1 \
 --stop-gradient 1 1 1 1 \
 --evaluation-flags 1 1 1 1 1 \
 --lr-steps 120000 160000 30000
