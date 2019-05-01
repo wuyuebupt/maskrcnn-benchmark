@@ -30,6 +30,7 @@ class IoUCoder(object):
             proposals (Tensor): boxes to be encoded
         """
 
+        # TO_REMOVE = 1  # TODO remove
         TO_REMOVE = 1  # TODO remove
         # ex_widths = proposals[:, 2] - proposals[:, 0] + TO_REMOVE
         # ex_heights = proposals[:, 3] - proposals[:, 1] + TO_REMOVE
@@ -67,8 +68,10 @@ class IoUCoder(object):
         # print (intersection_box_bottom)
         # wh = (rb - lt + TO_REMOVE).clamp(min=0) 
 
-        intersection_box_widths  = (intersection_box_right - intersection_box_left + TO_REMOVE).clamp(min=0)
-        intersection_box_heights = (intersection_box_bottom - intersection_box_top + TO_REMOVE).clamp(min=0)
+        # intersection_box_widths  = (intersection_box_right - intersection_box_left + TO_REMOVE).clamp(min=0)
+        # intersection_box_heights = (intersection_box_bottom - intersection_box_top + TO_REMOVE).clamp(min=0)
+        intersection_box_widths  = (intersection_box_right - intersection_box_left).clamp(min=0)
+        intersection_box_heights = (intersection_box_bottom - intersection_box_top).clamp(min=0)
 
         intersection_box_area = intersection_box_widths * intersection_box_heights
         proposal_area = proposal_widths * proposal_heights
@@ -82,10 +85,15 @@ class IoUCoder(object):
         # print (target_area)
 
         IoUs =  intersection_box_area / (proposal_area + target_area - intersection_box_area)
+        
+        # IoUs =  intersection_box_area / (proposal_area + target_area - intersection_box_area) + 1
+        # logIoUs = torch.log(IoUs)
+
         # print (IoUs)
         # print (IoUs.shape)
         # exit()
         return IoUs
+        # return logIoUs
 
         # ## 
         # return targets
@@ -102,7 +110,7 @@ class IoUCoder(object):
 
     #     boxes = boxes.to(rel_codes.dtype)
 
-    #     TO_REMOVE = 1  # TODO remove
+    #     TO_REMOVE = 1  # TODO remove 
     #     widths = boxes[:, 2] - boxes[:, 0] + TO_REMOVE
     #     heights = boxes[:, 3] - boxes[:, 1] + TO_REMOVE
     #     ctr_x = boxes[:, 0] + 0.5 * widths

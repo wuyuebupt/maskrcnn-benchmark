@@ -33,12 +33,12 @@ python  tools/train_net.py \
 --pretrained-model $PRETRAIN_MODEL \
 --data-dir ../maskrcnn-benchmark-file/datasets/ \
 --config-file $CONFIG_YAML \
---nonlocal-cls-num-group 2 \
+--nonlocal-cls-num-group 4 \
 --nonlocal-cls-num-stack 0 \
---nonlocal-reg-num-group 2 \
+--nonlocal-reg-num-group 4 \
 --nonlocal-reg-num-stack 0 \
 --nonlocal-shared-num-group 4 \
---nonlocal-shared-num-stack 1 \
+--nonlocal-shared-num-stack 2 \
 --nonlocal-inter-channels $INTER_CHANNELS \
 --nonlocal-out-channels $NONLOCAL_OUT_CHANNELS \
 --nonlocal-use-bn True \
@@ -53,11 +53,12 @@ python  tools/train_net.py \
 --mask-fc 1 1 1 1 \
 --maplevel-conv 0 112 224 448 100000 \
 --mask-conv 1 1 1 1 \
---mask-loss 0.4 1.6 1.4 0.6 0.1 \
+--mask-loss 0.4 1.6 1.4 0.6 1 \
 --conv-fc-threshold 224 \
 --lr-steps 100 200 300 \
 --stop-gradient 1 1 1 1 \
---evaluation-flags 1 1 1 1 1
+--evaluation-flags 1 1 1 1
+# --evaluation-flags 1 1 1 1 1
 
 ###### --stop-gradient
 # conv cls

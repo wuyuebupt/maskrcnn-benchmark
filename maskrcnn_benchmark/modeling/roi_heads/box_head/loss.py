@@ -4,6 +4,7 @@ from torch.nn import functional as F
 
 from maskrcnn_benchmark.layers import smooth_l1_loss
 from maskrcnn_benchmark.layers.smooth_l1_loss import smooth_l1_loss_mask
+from maskrcnn_benchmark.layers.smooth_l1_loss import smooth_l1_loss_debug
 # from maskrcnn_benchmark.layers import smooth_l1_loss_mask
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from maskrcnn_benchmark.modeling.iou_coder import IoUCoder
@@ -56,6 +57,7 @@ class FastRCNNLossComputation(object):
 
     def prepare_targets(self, proposals, targets):
         labels = []
+        labels_iou = []
         regression_targets = []
         iou_targets = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
@@ -66,6 +68,8 @@ class FastRCNNLossComputation(object):
 
             labels_per_image = matched_targets.get_field("labels")
             labels_per_image = labels_per_image.to(dtype=torch.int64)
+            labels_per_image_iou = matched_targets.get_field("labels")
+            labels_per_image_iou = labels_per_image_iou.to(dtype=torch.int64)
 
             # Label background (below the low threshold)
             bg_inds = matched_idxs == Matcher.BELOW_LOW_THRESHOLD
@@ -94,10 +98,11 @@ class FastRCNNLossComputation(object):
             # )
 
             labels.append(labels_per_image)
+            labels_iou.append(labels_per_image_iou)
             regression_targets.append(regression_targets_per_image)
             iou_targets.append(iou_targets_per_image)
 
-        return labels, regression_targets, iou_targets
+        return labels, regression_targets, iou_targets, labels_iou
 
     def subsample(self, proposals, targets):
         """
@@ -111,15 +116,16 @@ class FastRCNNLossComputation(object):
         """
 
         # labels, regression_targets = self.prepare_targets(proposals, targets)
-        labels, regression_targets, iou_targets = self.prepare_targets(proposals, targets)
+        labels, regression_targets, iou_targets, labels_iou = self.prepare_targets(proposals, targets)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
 
         proposals = list(proposals)
         # add corresponding label and regression_targets information to the bounding boxes
-        for labels_per_image, regression_targets_per_image, iou_targets_per_image,  proposals_per_image in zip(
-            labels, regression_targets, iou_targets, proposals
+        for labels_per_image, regression_targets_per_image, iou_targets_per_image,  proposals_per_image, labels_per_image_iou in zip(
+            labels, regression_targets, iou_targets, proposals, labels_iou
         ):
             proposals_per_image.add_field("labels", labels_per_image)
+            proposals_per_image.add_field("labels_iou", labels_per_image_iou)
             proposals_per_image.add_field(
                 "regression_targets", regression_targets_per_image
             )
@@ -167,6 +173,8 @@ class FastRCNNLossComputation(object):
         proposals = self._proposals
 
         labels = cat([proposal.get_field("labels") for proposal in proposals], dim=0)
+        labels_iou = cat([proposal.get_field("labels_iou") for proposal in proposals], dim=0)
+
         regression_targets = cat(
             [proposal.get_field("regression_targets") for proposal in proposals], dim=0
         )
@@ -219,8 +227,13 @@ class FastRCNNLossComputation(object):
             map_inds = 4 * labels_pos[:, None] + torch.tensor(
                 [0, 1, 2, 3], device=device)
 
-        ## iou map
-        map_inds_iou = labels_pos[:, None] # + torch.tensor([0], device=device)
+        ## iou map, take all samples
+        sampled_all_inds_subset = torch.nonzero(labels_iou > 0).squeeze(1)
+        # print (sampled_pos_inds_subset)
+        labels_pos_iou = labels_iou[sampled_all_inds_subset]
+        map_inds_iou = labels_pos_iou[:, None] + torch.tensor([0], device=device)
+        # map_inds_iou = labels_all[:, None] + torch.tensor([0], device=device)
+        # print (map_inds_iou)
 
 
 
@@ -251,18 +264,34 @@ class FastRCNNLossComputation(object):
         # print (iou_targets[sampled_pos_inds_subset].shape)
         # print (iou_regression[sampled_pos_inds_subset[:, None], map_inds_iou].shape)
         # print (iou_targets[sampled_pos_inds_subset].shape)
+        # print (iou_targets.shape)
+        # print (iou_targets[sampled_pos_inds_subset].shape)
+        # exit()
+        # iou_loss = smooth_l1_loss(
+        #     iou_regression[sampled_pos_inds_subset[:, None], map_inds_iou],
+        #     iou_targets[sampled_pos_inds_subset],
+        #     size_average=False,
+        #     beta=1,
+        # )
+        # print (iou_loss)
+
+        
+        # print (iou_regression[:, map_inds_iou].shape)
+        # print (iou_regression[sampled_all_inds_subset[:,None], map_inds_iou].shape)
+        # print (iou_targets.shape)
+        ##
+        # iou_loss = smooth_l1_loss_debug(
         iou_loss = smooth_l1_loss(
-            iou_regression[sampled_pos_inds_subset[:, None], map_inds_iou],
-            iou_targets[sampled_pos_inds_subset],
+            iou_regression[sampled_all_inds_subset[:,None], map_inds_iou],
+            iou_targets[sampled_all_inds_subset, None],
             size_average=False,
             beta=1,
         )
-        # print (box_loss)
+
+
+        # print (iou_loss)
         iou_loss = iou_loss / labels.numel()
-
-
-
-        # print (box_loss)
+        # print (iou_loss)
         # print (labels.numel())
         # exit()
 

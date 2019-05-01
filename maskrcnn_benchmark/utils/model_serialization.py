@@ -77,4 +77,6 @@ def load_state_dict(model, loaded_state_dict):
     align_and_update_state_dicts(model_state_dict, loaded_state_dict)
 
     # use strict loading
-    model.load_state_dict(model_state_dict)
+    # model.load_state_dict(model_state_dict)
+    # use False strict loading
+    model.load_state_dict(model_state_dict, strict=False)

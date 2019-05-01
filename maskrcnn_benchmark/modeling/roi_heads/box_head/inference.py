@@ -93,6 +93,11 @@ class PostProcessor(nn.Module):
             # print (class_prob.shape)
             box_regression = box_regression_conv
 
+        # ious = iou_regression
+        # ious = class_prob_fc
+        ious = 1 - (1 - class_prob_conv) * (1 - class_prob_fc)
+        # ious = class_prob_conv
+
         # if self.mode == 5:
         #     class_prob = 1 - (1 - class_prob_conv) * (1-iou_regression)
         #     box_regression = box_regression_conv
@@ -123,18 +128,19 @@ class PostProcessor(nn.Module):
 
         proposals = proposals.split(boxes_per_image, dim=0)
         class_prob = class_prob.split(boxes_per_image, dim=0)
+        ious = ious.split(boxes_per_image, dim=0)
 
         results = []
-        for prob, boxes_per_img, image_shape in zip(
-            class_prob, proposals, image_shapes
+        for prob, boxes_per_img, image_shape, iou in zip(
+            class_prob, proposals, image_shapes, ious
         ):
-            boxlist = self.prepare_boxlist(boxes_per_img, prob, image_shape)
+            boxlist = self.prepare_boxlist(boxes_per_img, prob, image_shape, iou)
             boxlist = boxlist.clip_to_image(remove_empty=False)
             boxlist = self.filter_results(boxlist, num_classes)
             results.append(boxlist)
         return results
 
-    def prepare_boxlist(self, boxes, scores, image_shape):
+    def prepare_boxlist(self, boxes, scores, image_shape, ious):
         """
         Returns BoxList from `boxes` and adds probability scores information
         as an extra field
@@ -149,8 +155,10 @@ class PostProcessor(nn.Module):
         """
         boxes = boxes.reshape(-1, 4)
         scores = scores.reshape(-1)
+        scores = ious.reshape(-1)
         boxlist = BoxList(boxes, image_shape, mode="xyxy")
         boxlist.add_field("scores", scores)
+        boxlist.add_field("ious", ious)
         return boxlist
 
     def filter_results(self, boxlist, num_classes):
@@ -161,6 +169,7 @@ class PostProcessor(nn.Module):
         # if we had multi-class NMS, we could perform this directly on the boxlist
         boxes = boxlist.bbox.reshape(-1, num_classes * 4)
         scores = boxlist.get_field("scores").reshape(-1, num_classes)
+        ious = boxlist.get_field("ious").reshape(-1, num_classes)
 
         device = scores.device
         result = []
@@ -170,11 +179,35 @@ class PostProcessor(nn.Module):
         for j in range(1, num_classes):
             inds = inds_all[:, j].nonzero().squeeze(1)
             scores_j = scores[inds, j]
+            ious_j = ious[inds, j]
             boxes_j = boxes[inds, j * 4 : (j + 1) * 4]
             boxlist_for_class = BoxList(boxes_j, boxlist.size, mode="xyxy")
+            # boxlist_for_class.add_field("scores", scores_j)
+            # boxlist_for_class.add_field("scores", scores_j)
+
+            
+            # print (scores_j.shape)
+            # print (ious_j.shape)
+            
+
+            scores_2 = torch.stack([scores_j, ious_j])
+            # scores_2 = torch.cat([scores_j, ious_j],dim=0)
+            # print (scores_2.shape[1])
+            ### if scores_2.shape[1] == 0:
+            ###     scores_j_max = scores_j
+            ### else:
+            ###     # print (scores_2.shape)
+            ###     scores_j_max = torch.max(scores_2, dim=0)[0]
+            ###     # print (scores_j_max.shape)
+        
+            # exit()
+            # scores_j_max = torch.max
             boxlist_for_class.add_field("scores", scores_j)
+            # boxlist_for_class.add_field("scores", scores_j_max)
+
+            boxlist_for_class.add_field("ious", ious_j)
             boxlist_for_class = boxlist_nms(
-                boxlist_for_class, self.nms
+                boxlist_for_class, self.nms, score_field="ious"
             )
             num_labels = len(boxlist_for_class)
             boxlist_for_class.add_field(
