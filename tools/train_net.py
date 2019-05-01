@@ -203,7 +203,13 @@ def main():
         metavar="1",
         type=int,
     )
-
+    parser.add_argument(
+        "--nonlocal-fc-num-stack",
+        default="0",
+        help="nonlocal num stack reg",
+        metavar="1",
+        type=int,
+    )
     parser.add_argument(
         "--nonlocal-out-channels",
         default="2048",
@@ -388,6 +394,7 @@ def main():
     print (args.nonlocal_reg_num_stack)
     print (args.nonlocal_shared_num_group)
     print (args.nonlocal_shared_num_stack)
+    print (args.nonlocal_fc_num_stack)
     # print (args.nonlocal_use_shared)
     print (args.nonlocal_use_bn)
     print (args.nonlocal_use_relu)
@@ -422,6 +429,7 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK = args.nonlocal_reg_num_stack
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_GROUP = args.nonlocal_shared_num_group
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK = args.nonlocal_shared_num_stack
+    cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_FC_NUM_STACK = args.nonlocal_fc_num_stack
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_INTER_CHANNELS = args.nonlocal_inter_channels
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS = args.nonlocal_out_channels
 

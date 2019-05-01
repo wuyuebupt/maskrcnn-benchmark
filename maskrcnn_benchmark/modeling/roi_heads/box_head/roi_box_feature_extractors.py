@@ -277,6 +277,14 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
 
 
         ## mlp 
+
+        self.fc_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_FC_NUM_STACK
+        fc_nonlocal = []
+        for i in range(self.fc_num_stack):
+            fc_nonlocal.append(NONLocalBlock2D_Group(cfg.MODEL.BACKBONE.OUT_CHANNELS, num_group=2, inter_channels=128, sub_sample=False, bn_layer=True, relu_layer=True, use_softmax=False, use_ffconv=True, use_attention=True))
+        self.fc_nonlocal = ListModule(*fc_nonlocal)
+
+
         self.fc6 = make_fc(input_size, representation_size, use_gn)
         self.fc7 = make_fc(representation_size, representation_size, use_gn)
 
@@ -310,6 +318,9 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         x_reg = x_reg.view(x_reg.size(0), -1)
 
         ### MLP
+        # identity = identity.view(identity.size(0), -1)
+        for i in range(self.fc_num_stack):
+            identity = self.fc_nonlocal[i](identity)
         identity = identity.view(identity.size(0), -1)
 
         identity = F.relu(self.fc6(identity))
