@@ -232,6 +232,9 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         nonlocal_use_attention = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_ATTENTION
         nonlocal_inter_channels = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_INTER_CHANNELS
 
+        fc_use_ffconv = cfg.MODEL.ROI_BOX_HEAD.FC_USE_FFCONV
+        fc_use_attention = cfg.MODEL.ROI_BOX_HEAD.FC_USE_ATTENTION
+
         ## add conv and pool like faster rcnn
         self.avgpool = nn.AvgPool2d(kernel_size=7, stride=7)
         # out_channels = num_inputs
@@ -281,7 +284,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         self.fc_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_FC_NUM_STACK
         fc_nonlocal = []
         for i in range(self.fc_num_stack):
-            fc_nonlocal.append(NONLocalBlock2D_Group(cfg.MODEL.BACKBONE.OUT_CHANNELS, num_group=2, inter_channels=128, sub_sample=False, bn_layer=True, relu_layer=True, use_softmax=False, use_ffconv=True, use_attention=True))
+            fc_nonlocal.append(NONLocalBlock2D_Group(cfg.MODEL.BACKBONE.OUT_CHANNELS, num_group=2, inter_channels=128, sub_sample=False, bn_layer=True, relu_layer=True, use_softmax=False, use_ffconv=fc_use_ffconv, use_attention=fc_use_attention))
         self.fc_nonlocal = ListModule(*fc_nonlocal)
 
 

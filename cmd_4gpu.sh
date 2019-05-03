@@ -75,6 +75,8 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --nonlocal-use-softmax False \
 --nonlocal-use-ffconv True \
 --nonlocal-use-attention False \
+--fc-use-ffconv False \
+--fc-use-attention False \
 --nonlocal-inter-channels $INTER_CHANNELS \
 --nonlocal-out-channels $NONLOCAL_OUT_CHANNELS \
 --conv-bbox-expand  1.2 \
@@ -84,7 +86,7 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --mask-fc 1 1 1 1 \
 --maplevel-conv 0 112 224 448 100000 \
 --mask-conv 1 1 1 1 \
---mask-loss 0.4 1.6 0.0 0.0 \
+--mask-loss 0.4 1.6 1.6 0.4 \
 --stop-gradient 1 1 1 1 \
 --evaluation-flags 1 1 1 1 \
 --lr-steps 100 200 300

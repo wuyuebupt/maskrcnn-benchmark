@@ -261,6 +261,21 @@ def main():
         type=str,
     )
     parser.add_argument(
+        "--fc-use-attention",
+        default="True",
+        help="nonlocal use attention before ffconv",
+        metavar="True",
+        type=str,
+    )
+
+    parser.add_argument(
+        "--fc-use-ffconv",
+        default="True",
+        help="nonlocal use ffconv after nonlocal with residual",
+        metavar="True",
+        type=str,
+    )
+    parser.add_argument(
         "--nonlocal-use-relu",
         default="True",
         help="nonlocal use relu after bn",
@@ -403,6 +418,9 @@ def main():
     print (args.nonlocal_use_softmax)
     print (args.nonlocal_use_ffconv)
     print (args.nonlocal_use_attention)
+    print (args.fc_use_ffconv)
+    print (args.fc_use_attention)
+
     print (args.conv_bbox_expand)
     print (args.fc_bbox_expand)
     print (args.backbone_out_channels)
@@ -440,6 +458,9 @@ def main():
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU = ast.literal_eval(args.nonlocal_use_relu)
 
     cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_ATTENTION = ast.literal_eval(args.nonlocal_use_attention)
+
+    cfg.MODEL.ROI_BOX_HEAD.FC_USE_FFCONV = ast.literal_eval(args.fc_use_ffconv)
+    cfg.MODEL.ROI_BOX_HEAD.FC_USE_ATTENTION = ast.literal_eval(args.fc_use_attention)
 
     cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_CONV = args.maplevel_conv
     cfg.MODEL.ROI_BOX_HEAD.POOLER_MAP_LEVEL_FC = args.maplevel_fc
