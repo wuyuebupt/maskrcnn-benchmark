@@ -148,15 +148,32 @@ class FastRCNNLossComputation(object):
             [proposal.get_field("regression_targets") for proposal in proposals], dim=0
         )
 
+        sampled_pos_inds_subset = torch.nonzero(labels > 0).squeeze(1)
+
+
         # print (class_logits.shape)
         # print (labels.shape)
+        class_logits_pos = class_logits[sampled_pos_inds_subset]
+        labels_pos = labels[sampled_pos_inds_subset]
+        # print (class_logits_pos.shape)
+        # print (class_logits_pos.shape)
+        # exit()
+        # regression_targets[sampled_pos_inds_subset],
+        # print (class_logits.shape)
+        # print (labels.shape)
+        classification_loss_pos = F.cross_entropy(class_logits_pos, labels_pos)
         classification_loss = F.cross_entropy(class_logits, labels, reduce=False)
         # print (classification_loss)
         # print (classification_loss.shape)
-        classification_loss_mask = classification_loss * mask.to(torch.float)
         # classification_loss_mask = classification_loss * mask.to(torch.cuda.FloatTensor)
         # print (classification_loss_mask)
+
+
+        classification_loss_mask = classification_loss * mask.to(torch.float)
         classification_loss_mask_ = torch.sum(classification_loss_mask) / classification_loss_mask.numel()
+
+
+
         # classification_loss_mask_ = torch.sum(classification_loss_mask) / (torch.sum(mask) + 1e-6)
         # print (classification_loss_mask_)
         # print (mask)
@@ -177,7 +194,7 @@ class FastRCNNLossComputation(object):
         # advanced indexing
 
         # print (labels)
-        sampled_pos_inds_subset = torch.nonzero(labels > 0).squeeze(1)
+        # sampled_pos_inds_subset = torch.nonzero(labels > 0).squeeze(1)
         # print (sampled_pos_inds_subset)
         labels_pos = labels[sampled_pos_inds_subset]
         # print (labels_pos)
@@ -224,7 +241,8 @@ class FastRCNNLossComputation(object):
         # classification_loss_mask_ = classification_loss_mask_ * 0.5
         # box_loss = box_loss * 0.5
 
-        return classification_loss_mask_, box_loss
+        # return classification_loss_mask_, box_loss
+        return classification_loss_pos, classification_loss_mask_, box_loss
 
 
 def make_roi_box_loss_evaluator(cfg):
