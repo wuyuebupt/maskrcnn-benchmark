@@ -69,7 +69,7 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --nonlocal-reg-num-stack 0 \
 --nonlocal-shared-num-group 4 \
 --nonlocal-shared-num-stack 2 \
---nonlocal-fc-num-stack 2 \
+--nonlocal-fc-num-stack 0 \
 --nonlocal-use-bn True \
 --nonlocal-use-relu True \
 --nonlocal-use-softmax False \
@@ -89,8 +89,10 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --mask-loss 0.4 1.6 1.6 0.4 \
 --stop-gradient 1 1 1 1 \
 --evaluation-flags 1 1 1 1 \
---lr-steps 100 200 300
+--lr-steps 120000 160000 30000
+# --lr-steps 100 200 300
 # --lr-steps 120000 160000 180000
+# --mask-loss 0.4 1.6 1.6 0.4 \
 
 ####### --stop-gradient 1 0 1 0: 4 flags in order, 0 off no gradient, 1 with gradient ########
 # conv cls

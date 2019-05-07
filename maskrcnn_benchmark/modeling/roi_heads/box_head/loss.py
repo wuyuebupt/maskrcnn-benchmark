@@ -149,19 +149,40 @@ class FastRCNNLossComputation(object):
         )
 
         sampled_pos_inds_subset = torch.nonzero(labels > 0).squeeze(1)
+        # sampled_pos_inds_subset = torch.nonzero(labels == 0).squeeze(1)
 
 
         # print (class_logits.shape)
+        # print (class_logits[0,:])
         # print (labels.shape)
+        # print (labels[0])
+
         class_logits_pos = class_logits[sampled_pos_inds_subset]
         labels_pos = labels[sampled_pos_inds_subset]
+        # print (sampled_pos_inds_subset)
         # print (class_logits_pos.shape)
+        # print (labels_pos.shape)
+        # print (class_logits_pos)
+        # print (class_logits_pos[0,:])
+        # print (labels_pos)
         # print (class_logits_pos.shape)
         # exit()
         # regression_targets[sampled_pos_inds_subset],
         # print (class_logits.shape)
         # print (labels.shape)
-        classification_loss_pos = F.cross_entropy(class_logits_pos, labels_pos)
+        # classification_loss_pos = F.cross_entropy(class_logits_pos, labels_pos)
+
+        classification_loss_pos_ = F.cross_entropy(class_logits_pos, labels_pos, reduce=False)
+        # print (classification_loss_pos.shape) #  = F.cross_entropy(class_logits_pos, labels_pos, reduce=False)
+        classification_loss_pos = torch.sum(classification_loss_pos_) / labels.numel()
+
+        # print (classification_loss_pos_.shape)
+        # print (classification_loss_pos_)
+        # classification_loss_pos_v2 = torch.sum(classification_loss_pos) /  labels_pos.numel()
+        # print (classification_loss_pos_v2.shape)
+        # print (classification_loss_pos_v2)
+        # exit()
+
         classification_loss = F.cross_entropy(class_logits, labels, reduce=False)
         # print (classification_loss)
         # print (classification_loss.shape)
