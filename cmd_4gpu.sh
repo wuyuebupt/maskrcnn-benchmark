@@ -1,7 +1,8 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
 export NGPUS=4
-export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/double-head/fpn50-1x-dh-b12-back256-conv-only-Ys300g4-c1024x512-112x224x448-m10-wc10x10-f00x00-sc2-input-1553303475036_3797/
+# export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/double-head/fpn50-1x-dh-b12-back256-conv-only-Ys300g4-c1024x512-112x224x448-m10-wc10x10-f00x00-sc2-input-1553303475036_3797/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v21/
 
 ### for images/gpu = 1
 ### Resnet 50, C4
@@ -19,14 +20,30 @@ export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/double-head/fpn50-1x-dh
 ### Resnet 50, FPN
 # export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_50_FPN_1x_neighbor_bs4.yaml
 # export PRETRAIN_MODEL=../../R-50.pkl
+# export OUT_CHANNELS=256
+# export NONLOCAL_OUT_CHANNELS=1024
+# export INTER_CHANNELS=512
+
+## old settings
 # export OUT_CHANNELS=2048
 # export INTER_CHANNELS=1024
 
 ### Resnet 101, FPN
 # export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_101_FPN_1x_neighbor_bs4.yaml
 # export PRETRAIN_MODEL=../../R-101.pkl
+# export OUT_CHANNELS=256
+# export NONLOCAL_OUT_CHANNELS=1024
+# export INTER_CHANNELS=512
+## old settings
 # export OUT_CHANNELS=2048
 # export INTER_CHANNELS=1024
+
+### ResNeXt 101, FPN
+export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_X_101_32x8d_FPN_1x_neighbor_bs4.yaml
+export PRETRAIN_MODEL=../../X-101-32x8d.pkl
+export OUT_CHANNELS=256
+export NONLOCAL_OUT_CHANNELS=1024
+export INTER_CHANNELS=512
 
 
 
@@ -44,17 +61,29 @@ export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/double-head/fpn50-1x-dh
 # export INTER_CHANNELS=1024
 
 ### Resnet 50, FPN
-export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_50_FPN_1x_neighbor_bs8.yaml
-export PRETRAIN_MODEL=../../R-50.pkl
-export OUT_CHANNELS=256
-export NONLOCAL_OUT_CHANNELS=1024
-export INTER_CHANNELS=512
+# export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_50_FPN_1x_neighbor_bs8.yaml
+# export PRETRAIN_MODEL=../../R-50.pkl
+# export OUT_CHANNELS=256
+# export NONLOCAL_OUT_CHANNELS=1024
+# export INTER_CHANNELS=512
 
 ### Resnet 101, FPN
 # export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_R_101_FPN_1x_neighbor_bs8.yaml
 # export PRETRAIN_MODEL=../../R-101.pkl
+# export OUT_CHANNELS=256
+# export NONLOCAL_OUT_CHANNELS=1024
+# export INTER_CHANNELS=512
+
+### old settings, might have some problem, check with yiche
 # export OUT_CHANNELS=2048
 # export INTER_CHANNELS=1024
+
+### ResNeXt 101, FPN
+# export CONFIG_YAML=configs/bbox_expand_4gpu/e2e_faster_rcnn_X_101_32x8d_FPN_1x_neighbor_bs8.yaml
+# export PRETRAIN_MODEL=../../X-101-32x8d.pkl
+# export OUT_CHANNELS=256
+# export NONLOCAL_OUT_CHANNELS=1024
+# export INTER_CHANNELS=512
 
 
 python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
@@ -67,7 +96,7 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --nonlocal-reg-num-group 4 \
 --nonlocal-reg-num-stack 0 \
 --nonlocal-shared-num-group 4 \
---nonlocal-shared-num-stack 3 \
+--nonlocal-shared-num-stack 2 \
 --nonlocal-use-bn True \
 --nonlocal-use-relu True \
 --nonlocal-use-softmax False \
@@ -82,7 +111,7 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --mask-fc 1 1 1 1 \
 --maplevel-conv 0 112 224 448 100000 \
 --mask-conv 1 1 1 1 \
---mask-loss 0.4 1.6 0.0 0.0 \
+--mask-loss 0.4 1.6 1.6 0.4 \
 --stop-gradient 1 1 1 1 \
 --evaluation-flags 1 1 1 1 \
 --lr-steps 100 200 300
