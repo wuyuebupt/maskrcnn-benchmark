@@ -148,7 +148,8 @@ class FPNPredictorNeighbor(nn.Module):
 
         ## fc cls
         x_fc_cls = x[2]
-        x_fc_reg = x[2]
+        x_fc_reg = x[3]
+        # x_fc_reg = x[2]
         if self.loss_stop_gradient[2] == 0:
             x_fc_cls_detach = x_fc_cls.detach()
             scores_fc = self.cls_score_fc(x_fc_cls_detach)
@@ -173,7 +174,8 @@ class FPNPredictorNeighbor(nn.Module):
         # scores_fc = self.cls_score_fc(x[2])
         # bbox_deltas_fc = self.bbox_pred_fc(x[2])
 
-        return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[3], x[4]
+        return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[4], x[5]
+        # return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[3], x[4]
 
 
 
