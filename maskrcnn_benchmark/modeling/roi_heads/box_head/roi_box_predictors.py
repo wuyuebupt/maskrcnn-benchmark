@@ -96,16 +96,25 @@ class FastRCNNPredictor(nn.Module):
 
 @registry.ROI_BOX_PREDICTOR.register("FPNPredictorNeighbor")
 class FPNPredictorNeighbor(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg, conv_representation_cls_size, conv_representation_reg_size):
         super(FPNPredictorNeighbor, self).__init__()
         num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
         # representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
-        representation_size = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
-        # representation_size = cfg.MODEL.BACKBONE.OUT_CHANNELS
+        # use_circle_pool  = cfg.MODEL.ROI_BOX_HEAD.USE_CIRCLE_POOL
+        # if use_circle_pool:
+        #     representation_size = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS * 3
+        # else:
+        #     representation_size = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
 
-        self.cls_score = nn.Linear(representation_size, num_classes)
+        # representation_size = cfg.MODEL.BACKBONE.OUT_CHANNELS
+        # print (representation_size)
+        # exit()
+
+        self.cls_score = nn.Linear(conv_representation_cls_size, num_classes)
+        # self.cls_score = nn.Linear(representation_size, num_classes)
         num_bbox_reg_classes = 2 if cfg.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
-        self.bbox_pred = nn.Linear(representation_size, num_bbox_reg_classes * 4)
+        self.bbox_pred = nn.Linear(conv_representation_reg_size, num_bbox_reg_classes * 4)
+        # self.bbox_pred = nn.Linear(representation_size, num_bbox_reg_classes * 4)
 
         self.loss_stop_gradient = cfg.MODEL.ROI_BOX_HEAD.LOSS_STOP_GRADIENT
 
@@ -148,7 +157,7 @@ class FPNPredictorNeighbor(nn.Module):
 
         ## fc cls
         x_fc_cls = x[2]
-        x_fc_reg = x[2]
+        x_fc_reg = x[3]
         if self.loss_stop_gradient[2] == 0:
             x_fc_cls_detach = x_fc_cls.detach()
             scores_fc = self.cls_score_fc(x_fc_cls_detach)
@@ -173,7 +182,7 @@ class FPNPredictorNeighbor(nn.Module):
         # scores_fc = self.cls_score_fc(x[2])
         # bbox_deltas_fc = self.bbox_pred_fc(x[2])
 
-        return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[3], x[4]
+        return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[4], x[5]
 
 
 
@@ -201,6 +210,8 @@ class FPNPredictor(nn.Module):
 
 
 
-def make_roi_box_predictor(cfg):
+# def make_roi_box_predictor(cfg):
+def make_roi_box_predictor(cfg, conv_representation_cls_size, conv_representation_reg_size):
     func = registry.ROI_BOX_PREDICTOR[cfg.MODEL.ROI_BOX_HEAD.PREDICTOR]
-    return func(cfg)
+    ## only support FPNPredictorNeighbor
+    return func(cfg, conv_representation_cls_size, conv_representation_reg_size)

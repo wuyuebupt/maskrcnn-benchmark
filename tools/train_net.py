@@ -361,6 +361,54 @@ def main():
         metavar="1 1 1 1",
         type=int,
     )
+    # parser.add_argument(
+    #     "--use-circle-pool",
+    #     default="True",
+    #     help="use circle pool or avgpool",
+    #     metavar="True",
+    #     type=str,
+    # )
+
+
+    parser.add_argument(
+        "--use-invert",
+        default="True",
+        help="use invert residual",
+        metavar="True",
+        type=str,
+    )
+
+    ### pool methods for 4 tasks
+    ## three types: avg, noPool, circle
+    parser.add_argument(
+        "--conv-cls-pool",
+        default="avg",
+        help="pool tpye",
+        metavar="avg",
+        type=str,
+    )
+    parser.add_argument(
+        "--conv-reg-pool",
+        default="avg",
+        help="pool tpye",
+        metavar="avg",
+        type=str,
+    )
+    parser.add_argument(
+        "--fc-cls-pool",
+        default="noPool",
+        help="pool tpye",
+        metavar="noPool",
+        type=str,
+    )
+    parser.add_argument(
+        "--fc-reg-pool",
+        default="avg",
+        help="pool tpye",
+        metavar="noPool",
+        type=str,
+    )
+
 
     args = parser.parse_args()
     print (args.config_file)
@@ -442,6 +490,14 @@ def main():
 
     cfg.MODEL.BACKBONE.OUT_CHANNELS = args.backbone_out_channels
 
+    ## circle pool
+    cfg.MODEL.ROI_BOX_HEAD.USE_INVERT = ast.literal_eval(args.use_invert)
+    # cfg.MODEL.ROI_BOX_HEAD.USE_CIRCLE_POOL = ast.literal_eval(args.use_circle_pool)
+    cfg.MODEL.ROI_BOX_HEAD.CONV_CLS_POOL = args.conv_cls_pool
+    cfg.MODEL.ROI_BOX_HEAD.CONV_REG_POOL = args.conv_reg_pool
+    cfg.MODEL.ROI_BOX_HEAD.FC_CLS_POOL = args.fc_cls_pool
+    cfg.MODEL.ROI_BOX_HEAD.FC_REG_POOL = args.fc_reg_pool
+
     # double heads
     cfg.MODEL.ROI_BOX_HEAD.LOSS_STOP_GRADIENT = args.stop_gradient
     cfg.TEST.EVALUATION_FLAGS = args.evaluation_flags
@@ -454,7 +510,13 @@ def main():
     cfg.SOLVER.STEPS = (args.lr_steps[0], args.lr_steps[1])
     # print (cfg.SOLVER.MAX_ITER)
     # print (cfg.SOLVER.STEPS)
+
+    ### used to freeze the cfg, not freeze so that it can be modified during the init
+    ## still freeze
     cfg.freeze()
+   
+
+
     # print (cfg)
     # exit()
 

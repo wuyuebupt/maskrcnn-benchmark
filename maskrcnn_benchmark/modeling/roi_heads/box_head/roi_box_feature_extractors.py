@@ -16,6 +16,8 @@ from .attention import NONLocalBlock2D_Group
 from .attention import ListModule
 from maskrcnn_benchmark.layers import Conv2d
 
+from .circle_pool import CirclePool
+
 
 
 @registry.ROI_BOX_FEATURE_EXTRACTORS.register("ResNet50Conv5ROIFeatureExtractorNeighbor")
@@ -220,7 +222,6 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         # )
 
         num_inputs = cfg.MODEL.BACKBONE.OUT_CHANNELS
-        input_size = cfg.MODEL.BACKBONE.OUT_CHANNELS * resolution ** 2
         representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
         use_gn = cfg.MODEL.ROI_BOX_HEAD.USE_GN
         # self.pooler = pooler
@@ -232,53 +233,137 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         nonlocal_use_attention = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_ATTENTION
         nonlocal_inter_channels = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_INTER_CHANNELS
 
+        # self.use_circle_pool = cfg.MODEL.ROI_BOX_HEAD.USE_CIRCLE_POOL
+        self.conv_cls_pool = cfg.MODEL.ROI_BOX_HEAD.CONV_CLS_POOL
+        self.conv_reg_pool = cfg.MODEL.ROI_BOX_HEAD.CONV_CLS_POOL
+        self.fc_cls_pool = cfg.MODEL.ROI_BOX_HEAD.FC_CLS_POOL
+        self.fc_reg_pool = cfg.MODEL.ROI_BOX_HEAD.FC_REG_POOL
+
+        self.use_invert = cfg.MODEL.ROI_BOX_HEAD.USE_INVERT
         ## add conv and pool like faster rcnn
-        self.avgpool = nn.AvgPool2d(kernel_size=7, stride=7)
+        # self.avgpool = nn.AvgPool2d(kernel_size=7, stride=7)
+
+        ### pool logic 
+        ## if type the same -> share
+        ## if type not same -> sperate
+
+        ### conv feature extraction
+        if self.conv_cls_pool == self.conv_reg_pool:
+            self.conv_share_flag = True
+        else:
+            self.conv_share_flag = False
+
+
         # out_channels = num_inputs
         out_channels = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
+        if self.use_invert == True:
+            assert (cfg.MODEL.BACKBONE.OUT_CHANNELS == out_channels, "dimension should match if use invert")
+            ## fc to 1024
+        else:
+            self.nonlocal_conv = FPNUpChannels(num_inputs, out_channels)
 
-        ## depreciate
-        # self.nonlocal_conv = nn.Sequential(
-        #      Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
-        #      nn.BatchNorm2d(out_channels),
-        #      nn.ReLU()
-        # )
-        self.nonlocal_conv = FPNUpChannels(num_inputs, out_channels)
+        ## shared
+        if self.conv_share_flag == True:
+            ## shared non-local
+            # if self.nonlocal_use_shared == True:
+            shared_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_GROUP
+            self.shared_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK
+            shared_nonlocal = []
+            for i in range(self.shared_num_stack):
+                shared_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=shared_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax, use_ffconv=nonlocal_use_ffconv, use_attention=nonlocal_use_attention, use_invert=self.use_invert))
+            self.shared_nonlocal = ListModule(*shared_nonlocal)
+        else:
+            ## seperate 
+            ## seperate group non-local, before fc6 and fc7
+            cls_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_GROUP
+            self.cls_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_STACK
 
-        ## shared non-local
-        # if self.nonlocal_use_shared == True:
-        shared_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_GROUP
-        self.shared_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_SHARED_NUM_STACK
-        shared_nonlocal = []
-        for i in range(self.shared_num_stack):
-            shared_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=shared_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax, use_ffconv=nonlocal_use_ffconv, use_attention=nonlocal_use_attention))
-        self.shared_nonlocal = ListModule(*shared_nonlocal)
+            reg_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_GROUP
+            self.reg_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK
+
+            nonlocal_use_bn = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN
+            nonlocal_use_relu = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU
+
+            cls_nonlocal = []
+            for i in range(self.cls_num_stack):
+                cls_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=cls_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax, use_ffconv=nonlocal_use_ffconv, use_attention=nonlocal_use_attention, use_invert=self.use_invert))
+            self.cls_nonlocal = ListModule(*cls_nonlocal)
+
+            reg_nonlocal = []
+            for i in range(self.reg_num_stack):
+                reg_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=reg_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax, use_ffconv=nonlocal_use_ffconv, use_attention=nonlocal_use_attention, use_invert=self.use_invert))
+            self.reg_nonlocal = ListModule(*reg_nonlocal)
 
 
-        ## seperate group non-local, before fc6 and fc7
-        cls_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_GROUP
-        self.cls_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_CLS_NUM_STACK
+        ## conv pool extraction 
+        input_dimension = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_OUT_CHANNELS
+        if self.conv_share_flag == True:
+            self.conv_share_pool = CirclePool(self.conv_cls_pool, input_dimension=input_dimension)
+            self.conv_output_size = self.conv_share_pool.output_dimension
+        else:
+            self.conv_cls_pool = CirclePool(self.conv_cls_pool, input_dimension=input_dimension)
+            self.conv_cls_output_size = self.conv_cls_pool.output_dimension
 
-        reg_num_group = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_GROUP
-        self.reg_num_stack = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_REG_NUM_STACK
+            self.conv_reg_pool = CirclePool(self.conv_cls_pool, input_dimension=input_dimension)
+            self.conv_reg_output_size = self.conv_reg_pool.output_dimension
 
-        nonlocal_use_bn = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_BN
-        nonlocal_use_relu = cfg.MODEL.ROI_BOX_HEAD.NONLOCAL_USE_RELU
+        ### add one fc to conv
+        if self.use_invert == True:
+            if self.conv_share_flag == True:
+                # representation_size
+                self.conv_share_fc =  make_fc(self.conv_output_size, representation_size, use_gn)
+                self.conv_dim = representation_size
+            else:
+                self.conv_fc_cls =  make_fc(self.conv_cls_output_size, representation_size, use_gn)
+                self.conv_fc_reg =  make_fc(self.conv_reg_output_size, representation_size, use_gn)
+                self.conv_dim_cls = representation_size
+                self.conv_dim_reg = representation_size
+        else:
+            ## already 1024
+            if self.conv_share_flag == True:
+                self.conv_dim = self.conv_output_size
+            else:
+                self.conv_dim_cls = conv_cls_output_size
+                self.conv_dim_reg = conv_reg_output_size
+                  
+        ## change flags here
 
-        cls_nonlocal = []
-        for i in range(self.cls_num_stack):
-            cls_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=cls_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax, use_ffconv=nonlocal_use_ffconv, use_attention=nonlocal_use_attention))
-        self.cls_nonlocal = ListModule(*cls_nonlocal)
+        # if self.use_circle_pool:
+        #     input_size = cfg.MODEL.BACKBONE.OUT_CHANNELS * 3
+        #     self.avgpool = CirclePool(stride=1)
+        # else:
+        #     input_size = cfg.MODEL.BACKBONE.OUT_CHANNELS * resolution ** 2
+        #     self.avgpool = nn.AvgPool2d(kernel_size=7, stride=7)
 
-        reg_nonlocal = []
-        for i in range(self.reg_num_stack):
-            reg_nonlocal.append(NONLocalBlock2D_Group(out_channels, num_group=reg_num_group, inter_channels=nonlocal_inter_channels, sub_sample=False, bn_layer=nonlocal_use_bn, relu_layer=nonlocal_use_relu, use_softmax=nonlocal_use_softmax, use_ffconv=nonlocal_use_ffconv, use_attention=nonlocal_use_attention))
-        self.reg_nonlocal = ListModule(*reg_nonlocal)
+
+        ### fc share or seperate
+        if self.fc_cls_pool == self.fc_reg_pool:
+            self.fc_share_flag = True
+        else:
+            self.fc_share_flag = False
+
+        ## fc pool
+        fc_input_dimension = cfg.MODEL.BACKBONE.OUT_CHANNELS 
+        if self.fc_share_flag == True:
+            self.fc_share_pool = CirclePool(self.fc_cls_pool, input_dimension=fc_input_dimension)
+            self.fc_output_size = self.fc_share_pool.output_dimension
+        else:
+            self.fc_cls_pool = CirclePool(self.fc_cls_pool, input_dimension=fc_input_dimension)
+            self.fc_cls_output_size = self.fc_cls_pool.output_dimension
+
+            self.fc_reg_pool = CirclePool(self.fc_reg_pool, input_dimension=fc_input_dimension)
+            self.fc_reg_output_size = self.fc_reg_pool.output_dimension
 
 
         ## mlp 
-        self.fc6 = make_fc(input_size, representation_size, use_gn)
-        self.fc7 = make_fc(representation_size, representation_size, use_gn)
+        if self.fc_share_flag == True:
+            self.fc6 = make_fc(self.fc_output_size, representation_size, use_gn)
+            self.fc7 = make_fc(representation_size, representation_size, use_gn)
+        else:
+            self.fc6_cls = make_fc(self.fc_cls_output_size, representation_size, use_gn)
+            self.fc7_cls = make_fc(representation_size, representation_size, use_gn)
+            self.fc6_reg = make_fc(self.fc_reg_output_size, representation_size, use_gn)
+            self.fc7_reg = make_fc(representation_size, representation_size, use_gn)
 
     def forward(self, x, proposals):
         x_conv = x
@@ -289,33 +374,79 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         # x_fc, levels_fc = self.pooler_fc(x_fc, proposals)
 
 
-        identity = x_fc
-        ### model Y
-        x_conv =  self.nonlocal_conv(x_conv)
-        ## shared
-        for i in range(self.shared_num_stack):
-            x_conv = self.shared_nonlocal[i](x_conv)
+        ### conv
+        ## share
+        if self.use_invert == False:
+            x_conv =  self.nonlocal_conv(x_conv)
+        ## 
+        if self.conv_share_flag == True:
+            # shared 
+            for i in range(self.shared_num_stack):
+                x_conv = self.shared_nonlocal[i](x_conv)
+            x_conv = self.conv_share_pool(x_conv)
 
-        ## seperate
-        x_cls = x_conv
-        x_reg = x_conv
-        for i in range(self.cls_num_stack):
-            x_cls = self.cls_nonlocal[i](x_cls)
-        for i in range(self.reg_num_stack):
-            x_reg = self.reg_nonlocal[i](x_reg)
-         
-        x_cls = self.avgpool(x_cls)
-        x_cls = x_cls.view(x_cls.size(0), -1)
-        x_reg = self.avgpool(x_reg)
-        x_reg = x_reg.view(x_reg.size(0), -1)
+            if self.use_invert == True:
+                x_conv = F.relu(self.conv_share_fc(x_conv))
+            x_cls = x_conv
+            x_reg = x_conv
+        else:
+            # seperate
+            x_cls = x_conv
+            x_reg = x_conv
+            for i in range(self.cls_num_stack):
+                x_cls = self.cls_nonlocal[i](x_cls)
+            for i in range(self.reg_num_stack):
+                x_reg = self.reg_nonlocal[i](x_reg)
+
+            x_cls = self.conv_cls_pool(x_cls)
+            if self.use_invert == True:
+                x_cls = F.relu(self.conv_fc_cls(x_cls))
+            x_reg = self.conv_reg_pool(x_reg)
+            if self.use_invert == True:
+                x_reg = F.relu(self.conv_fc_reg(x_reg))
+             
+         # ## Conv circle pool
+         # x_cls = self.avgpool(x_cls)
+         # x_cls = x_cls.view(x_cls.size(0), -1)
+
+         # ## Conv Circle pool
+         # x_reg = self.avgpool(x_reg)
+         # x_reg = x_reg.view(x_reg.size(0), -1)
 
         ### MLP
-        identity = identity.view(identity.size(0), -1)
 
-        identity = F.relu(self.fc6(identity))
-        identity = F.relu(self.fc7(identity))
+        ## FC circle pool
 
-        return tuple((x_cls, x_reg, identity, mask, mask_fc))
+        ## FC with FC
+        #3 if self.use_circle_pool:
+        #3     identity = self.avgpool(identity)
+        # identity = identity.view(identity.size(0), -1)
+
+
+        ### shared
+        if self.fc_share_flag == True:
+            x_fc = self.fc_share_pool(x_fc)
+            x_fc = F.relu(self.fc6(x_fc))
+            x_fc = F.relu(self.fc7(x_fc))
+            x_fc_cls = x_fc
+            x_fc_reg = x_fc
+        else:
+            x_fc_cls = x_fc
+            x_fc_reg = x_fc
+            x_fc_cls = self.fc_cls_pool(x_fc_cls)
+            x_fc_cls = F.relu(self.fc6_cls(x_fc_cls))
+            x_fc_cls = F.relu(self.fc7_cls(x_fc_cls))
+            x_fc_reg = self.fc_reg_pool(x_fc_reg)
+            x_fc_reg = F.relu(self.fc6_reg(x_fc_reg))
+            x_fc_reg = F.relu(self.fc7_reg(x_fc_reg))
+
+        # print (identity.size())
+        # exit()
+        # identity = F.relu(self.fc6(identity))
+        # identity = F.relu(self.fc7(identity))
+
+        # return tuple((x_cls, x_reg, identity, mask, mask_fc))
+        return tuple((x_cls, x_reg, x_fc_cls, x_fc_reg, mask, mask_fc))
 
 
 

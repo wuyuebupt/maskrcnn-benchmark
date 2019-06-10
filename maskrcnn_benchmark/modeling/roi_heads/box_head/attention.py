@@ -26,6 +26,38 @@ class ListModule(nn.Module):
         return len(self._modules)
 
 
+class InvertRes(nn.Module):
+    def __init__(self, in_channels):
+        super(InvertRes, self).__init__()
+
+        ## in channel = 
+        inter_channels = in_channels * 2 
+        out_channels = in_channels
+
+        self.relu = nn.ReLU(inplace=True)
+        ## top
+        self.bottleneck = nn.Sequential(
+                             nn.Conv2d(in_channels, inter_channels, kernel_size=3, stride=1, padding=1, bias=False),
+                             nn.BatchNorm2d(inter_channels),
+                             nn.ReLU(inplace=True),
+                             nn.Conv2d(inter_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False),
+                             nn.BatchNorm2d(out_channels)
+          )
+
+        # Conv2d(num_inputs, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+        # nn.BatchNorm2d(out_channels)
+
+    def forward(self, x):
+        identity = x
+        ## bottom
+        out = self.bottleneck(x)
+        ## residual
+        out1 = out + identity
+        out1 = self.relu(out1)
+
+        return out1
+
+
 
 class FPNFFConv(nn.Module):
     def __init__(self, in_channels):
@@ -63,7 +95,7 @@ class FPNFFConv(nn.Module):
 
 ### group non local
 class _NonLocalBlockND_Group(nn.Module):
-    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True, use_attention=True):
+    def __init__(self, in_channels, num_group, inter_channels=None, dimension=3, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True, use_attention=True, use_invert=True):
         super(_NonLocalBlockND_Group, self).__init__()
 
         assert dimension in [1, 2, 3]
@@ -138,7 +170,10 @@ class _NonLocalBlockND_Group(nn.Module):
 
 
         if self.use_ffconv:
-            self.ffconv = FPNFFConv(self.in_channels)
+            if use_invert == True:
+                self.ffconv = InvertRes(self.in_channels)
+            else:
+                self.ffconv = FPNFFConv(self.in_channels)
 
             #               nn.Sequential(
             #               conv_nd(in_channels=self.in_channels, out_channels=self.in_channels, kernel_size=1, stride=1, padding=0),
@@ -231,12 +266,12 @@ class _NonLocalBlockND_Group(nn.Module):
 
 
 class NONLocalBlock2D_Group(_NonLocalBlockND_Group):
-    def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True, use_attention=True):
+    def __init__(self, in_channels, num_group=1, inter_channels=None, sub_sample=True, bn_layer=True, relu_layer=True, use_softmax=True, use_ffconv=True, use_attention=True, use_invert=True):
         super(NONLocalBlock2D_Group, self).__init__(in_channels,
                                               num_group=num_group,
                                               inter_channels=inter_channels,
                                               dimension=2, sub_sample=sub_sample,
-                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax, use_ffconv=use_ffconv, use_attention=use_attention)
+                                              bn_layer=bn_layer, relu_layer=relu_layer, use_softmax=use_softmax, use_ffconv=use_ffconv, use_attention=use_attention, use_invert=use_invert)
 
 
 ## original non local

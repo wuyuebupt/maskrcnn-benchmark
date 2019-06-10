@@ -31,7 +31,15 @@ class ROIBoxHead(torch.nn.Module):
     def __init__(self, cfg):
         super(ROIBoxHead, self).__init__()
         self.feature_extractor = make_roi_box_feature_extractor(cfg)
-        self.predictor = make_roi_box_predictor(cfg)
+        ## conv pool
+        conv_share_flag = self.feature_extractor.conv_share_flag
+        if conv_share_flag == True:
+            conv_representation_cls_size = self.feature_extractor.conv_dim
+            conv_representation_reg_size = self.feature_extractor.conv_dim
+        else:
+            conv_representation_cls_size = self.feature_extractor.conv_dim_cls
+            conv_representation_reg_size = self.feature_extractor.conv_dim_reg
+        self.predictor = make_roi_box_predictor(cfg, conv_representation_cls_size, conv_representation_reg_size)
         self.post_processor = make_roi_box_post_processor(cfg)
 
         self.num_evaluation = len(self.post_processor)

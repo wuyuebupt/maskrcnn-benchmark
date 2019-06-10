@@ -85,29 +85,18 @@ python -m torch.distributed.launch --nproc_per_node=$NGPUS tools/train_net.py \
 --mask-fc 1 1 1 1 \
 --maplevel-conv 0 112 224 448 100000 \
 --mask-conv 1 1 1 1 \
---mask-loss 1.0 1.0 1.0 1.0 \
+--mask-loss 0.0 0.0 1.4 0.6 \
 --stop-gradient 1 1 1 1 \
 --evaluation-flags 1 1 1 1 \
---use-invert True \
---conv-cls-pool noPool \
---conv-reg-pool noPool \
+--use-invert False \
+--conv-cls-pool avg \
+--conv-reg-pool avg \
 --fc-cls-pool noPool \
 --fc-reg-pool noPool \
 --lr-steps 120000 160000 30000
 # --lr-steps 120000 160000 180000
 # --lr-steps 100 200 300
 # --mask-loss 0.4 1.6 1.4 0.6 \
-
-
-
-####### pool method, noPool, avg, circle                                              ########
-# conv-cls-pool noPool avg circle 
-# conv-reg-pool noPool avg circle
-# fc-cls-pool   noPool avg circle
-# fc-reg-pool   noPool avg circle
-##############################################################################################
-
-
 
 ####### --stop-gradient 1 0 1 0: 4 flags in order, 0 off no gradient, 1 with gradient ########
 # conv cls
