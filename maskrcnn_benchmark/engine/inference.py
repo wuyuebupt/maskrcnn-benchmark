@@ -22,10 +22,17 @@ def compute_on_dataset(model, data_loader, device):
     # results_dict = {}
     cpu_device = torch.device("cpu")
     for i, batch in enumerate(tqdm(data_loader)):
+        if i != 3:
+            continue
         images, targets, image_ids = batch
+        print (targets)
+        print (targets[0].bbox)
+        print (targets[0].extra_fields)
         images = images.to(device)
+        targets[0].bbox = targets[0].bbox.to(device)
         with torch.no_grad():
-            output = model(images)
+            # output = model(images)
+            output = model(images, targets)
             # print (len(output))
             # exit()
             # for out in output:
@@ -38,7 +45,9 @@ def compute_on_dataset(model, data_loader, device):
                 {img_id: result for img_id, result in zip(image_ids, out)}
             )
         # if i == 10:
-        #     break
+        if i == 3:
+            exit() 
+            break
     ## remove empty dicts
     results_dict_list_ = []
     for results_dict in results_dict_list:

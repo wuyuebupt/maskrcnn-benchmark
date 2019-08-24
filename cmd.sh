@@ -1,6 +1,13 @@
 export PYTHONPATH=$PWD/maskrcnn_pythonpath
 
-export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v15/
+# export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v15/
+# export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v15/
+### resnet 101
+# export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/nips/fpn101-1x-DHNew-bc13-back256-conv-att-Ys200g4-c1024x512-L112x224x448-m125x100-wc04x16-f14x06--wu1-input-1553839402050_9330
+### resnet 50
+export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/nips/fpn50-1x-DHNew-bc13-back256-conv-att-Ys200g4-c1024x512-L112x224x448-m10-wc05x20-f14x06-wu1-input-1553839402050_8133
+
+
 
 ### Resnet 50, C4
 # export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_50_C4_1x_neighbor.yaml
@@ -16,6 +23,8 @@ export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_v15/
 
 ### Resnet 50, FPN
 export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_50_FPN_1x_neighbor.yaml
+# export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_50_FPN_1x_neighbor_testdev.yaml
+
 export PRETRAIN_MODEL=../../R-50.pkl
 export OUT_CHANNELS=256
 export NONLOCAL_OUT_CHANNELS=1024
@@ -23,7 +32,12 @@ export INTER_CHANNELS=512
 
 ### Resnet 101, FPN
 # export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_101_FPN_1x_neighbor.yaml
+# export CONFIG_YAML=configs/bbox_expand_1gpu/e2e_faster_rcnn_R_101_FPN_1x_neighbor_testdev.yaml
 # export PRETRAIN_MODEL=../../R-101.pkl
+# export OUT_CHANNELS=256
+# export NONLOCAL_OUT_CHANNELS=1024
+# export INTER_CHANNELS=512
+
 # export OUT_CHANNELS=2048
 # export INTER_CHANNELS=1024
 
@@ -33,20 +47,20 @@ python  tools/train_net.py \
 --pretrained-model $PRETRAIN_MODEL \
 --data-dir ../maskrcnn-benchmark-file/datasets/ \
 --config-file $CONFIG_YAML \
---nonlocal-cls-num-group 2 \
+--nonlocal-cls-num-group 4 \
 --nonlocal-cls-num-stack 0 \
---nonlocal-reg-num-group 2 \
+--nonlocal-reg-num-group 4 \
 --nonlocal-reg-num-stack 0 \
 --nonlocal-shared-num-group 4 \
---nonlocal-shared-num-stack 1 \
+--nonlocal-shared-num-stack 2 \
 --nonlocal-inter-channels $INTER_CHANNELS \
 --nonlocal-out-channels $NONLOCAL_OUT_CHANNELS \
 --nonlocal-use-bn True \
 --nonlocal-use-relu True \
 --nonlocal-use-softmax False \
 --nonlocal-use-ffconv True \
---nonlocal-use-attention False \
---conv-bbox-expand  1.2 \
+--nonlocal-use-attention True \
+--conv-bbox-expand  1.3 \
 --fc-bbox-expand  1.0 \
 --backbone-out-channels $OUT_CHANNELS \
 --maplevel-fc 0 112 224 448 100000 \
@@ -56,8 +70,8 @@ python  tools/train_net.py \
 --mask-loss 0.5 0.5 0.5 0.5 \
 --conv-fc-threshold 224 \
 --lr-steps 100 200 300 \
---stop-gradient 1 0 1 0 \
---evaluation-flags 0 1 1 1
+--stop-gradient 1 1 1 1 \
+--evaluation-flags 1 1 0 0
 
 ###### --stop-gradient
 # conv cls

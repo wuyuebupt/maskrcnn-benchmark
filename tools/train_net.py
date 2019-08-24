@@ -30,11 +30,16 @@ from maskrcnn_benchmark.utils.miscellaneous import mkdir
 import sys
 sys.stdout.flush()
 
+import scipy.io as sio
+
 
 
 def train(cfg, local_rank, distributed):
     model = build_detection_model(cfg)
-    print (model)
+    # print (model)
+    # print (model.roi_heads.box.feature_extractor.fc6)
+    # print (model.roi_heads.box.feature_extractor.fc6.weight)
+    # print (model.roi_heads.box.feature_extractor.fc6.bias)
     # exit()
     device = torch.device(cfg.MODEL.DEVICE)
     model.to(device)
@@ -482,6 +487,17 @@ def main():
 
     model = train(cfg, args.local_rank, args.distributed)
 
+    ### save weight to mat
+    # print (model)
+    # print (model.roi_heads.box.feature_extractor.fc6)
+    # print (model.roi_heads.box.feature_extractor.fc6.weight)
+    # print (model.roi_heads.box.feature_extractor.fc6.bias)
+
+    # fc6_weight_numpy = model.roi_heads.box.feature_extractor.fc6.weight.cpu().detach().numpy()
+    # print (fc6_weight_numpy)
+    # print (fc6_weight_numpy.shape)
+    # sio.savemat('fc6_weight.mat', {'w': fc6_weight_numpy})
+    # exit()
     if not args.skip_test:
         test(cfg, model, args.distributed)
 

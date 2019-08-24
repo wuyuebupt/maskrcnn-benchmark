@@ -95,19 +95,42 @@ class PostProcessor(nn.Module):
         image_shapes = [box.size for box in boxes]
         boxes_per_image = [len(box) for box in boxes]
         concat_boxes = torch.cat([a.bbox for a in boxes], dim=0)
+        ## input concat_boxes
+        concat_boxes_np = concat_boxes.cpu().detach().numpy()
+        print (concat_boxes_np)
+        print (concat_boxes_np.shape)
 
+        print (boxes_per_image)
+        gt_labels = boxes[0].extra_fields['labels']
+        print (gt_labels)
         if self.cls_agnostic_bbox_reg:
             box_regression = box_regression[:, -4:]
+
+        
         proposals = self.box_coder.decode(
             box_regression.view(sum(boxes_per_image), -1), concat_boxes
         )
+        print (proposals.shape)
+        # get the gt bbox
+        proposals = proposals[:, 4*gt_labels:4*gt_labels+4]
+        print (proposals.shape)
+        # exit()
+
+
+
         if self.cls_agnostic_bbox_reg:
             proposals = proposals.repeat(1, class_prob.shape[1])
 
         num_classes = class_prob.shape[1]
 
+        print (proposals)
+        print (class_prob.shape)
+        class_prob = class_prob[:, gt_labels]
+        print (class_prob.shape)
         proposals = proposals.split(boxes_per_image, dim=0)
         class_prob = class_prob.split(boxes_per_image, dim=0)
+        print (proposals)
+        # print (prop)
 
         results = []
         for prob, boxes_per_img, image_shape in zip(
@@ -115,8 +138,24 @@ class PostProcessor(nn.Module):
         ):
             boxlist = self.prepare_boxlist(boxes_per_img, prob, image_shape)
             boxlist = boxlist.clip_to_image(remove_empty=False)
-            boxlist = self.filter_results(boxlist, num_classes)
+            print (boxlist)
+            print (boxlist.bbox)
+            print (boxlist.extra_fields['scores'])
+            out_boxes_np  = boxlist.bbox.cpu().detach().numpy()
+            cls_np  = boxlist.extra_fields['scores'].cpu().detach().numpy()
+            # boxlist = self.filter_results(boxlist, num_classes)
+            # print (boxlist)
+            # print (boxlist.bbox)
+            # print (boxlist.extra_fields['scores'])
+            # print (boxlist.extra_fields['labels'])
+
+         
             results.append(boxlist)
+        ## 
+        import scipy.io as sio
+        save_name = 'bbox_weight' + str(self.mode) + '.mat'
+        sio.savemat(save_name, {'bbox': concat_boxes_np, 'out_bbox':out_boxes_np, 'cls':cls_np})
+        # sio.savemat('bbox_weight.mat', {'bbox': concat_boxes_np, 'out_bbox':out_boxes_np, 'cls':cls_np})
         return results
 
     def prepare_boxlist(self, boxes, scores, image_shape):

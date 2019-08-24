@@ -12,6 +12,7 @@ from ..backbone import build_backbone
 from ..rpn.rpn import build_rpn
 from ..roi_heads.roi_heads import build_roi_heads
 
+from maskrcnn_benchmark.structures.bounding_box import BoxList
 
 class GeneralizedRCNN(nn.Module):
     """
@@ -29,6 +30,45 @@ class GeneralizedRCNN(nn.Module):
         self.backbone = build_backbone(cfg)
         self.rpn = build_rpn(cfg)
         self.roi_heads = build_roi_heads(cfg)
+
+    def expand_bbox(self, gt_box, split = 1):
+        # print (gt_box) 
+        # print (gt_box.shape) 
+        width  = gt_box[0, 2]  - gt_box[0, 0] + 1
+        height = gt_box[0, 3]  - gt_box[0, 1] + 1
+        # print (width, height)
+        num = split * 2 + 1
+
+        total_num = num * num
+        new_bbox = torch.zeros_like(gt_box)
+        # print (new_bbox.shape)
+        new_bbox = new_bbox.expand(total_num, -1).clone()
+
+        width_split = width/2 / split
+        height_split = height/2 / split
+        # print (new_bbox.shape)
+        for i in range(num):
+            ## x
+            delta_x = (i - split ) * width_split
+            for j in range(num):
+                ## y
+                index = i * num + j
+
+                delta_y = (j - split ) * height_split
+                ## x
+                #print (index, delta_x, delta_y)
+                new_bbox[index, 0] = gt_box[0, 0] + delta_x
+                new_bbox[index, 1] = gt_box[0, 1] + delta_y
+                new_bbox[index, 2] = gt_box[0, 2] + delta_x
+                new_bbox[index, 3] = gt_box[0, 3] + delta_y
+                
+
+        # print (new_bbox)
+        # exit()
+
+        # return gt_box
+        return new_bbox
+
 
     def forward(self, images, targets=None):
         """
@@ -54,6 +94,38 @@ class GeneralizedRCNN(nn.Module):
         # exit()
         features = self.backbone(images.tensors)
         proposals, proposal_losses = self.rpn(images, features, targets)
+        print (proposals)
+
+
+        proposals = [targets[0]]
+        print (proposals)
+        # proposals[0].bbox = proposals[0].bbox[0,:]
+        print (proposals[0].bbox)
+
+        ## reduce target and  generate bboxlist
+        target_index = 0
+        selected_gt = proposals[0].bbox[target_index,:]
+
+        print (selected_gt)
+        selected_gt = selected_gt.reshape(-1, 4)
+        image_shape=  proposals[0].size
+        print (image_shape)
+        label = targets[0].extra_fields['labels'][target_index]
+        print (label)
+        
+        
+        print (selected_gt)
+
+        ## expend the gt bbox
+        neighbors = self.expand_bbox(selected_gt, 35)
+        
+         
+        # boxlist = BoxList(selected_gt, image_shape, mode="xyxy")
+        boxlist = BoxList(neighbors, image_shape, mode="xyxy")
+        boxlist.add_field('labels', label)
+      
+        print (boxlist)
+        proposals = [boxlist]
         if self.roi_heads:
             x, result, detector_losses = self.roi_heads(features, proposals, targets)
         else:
@@ -61,6 +133,10 @@ class GeneralizedRCNN(nn.Module):
             x = features
             result = proposals
             detector_losses = {}
+
+
+        print (result)
+        # exit()
 
         if self.training:
             losses = {}
