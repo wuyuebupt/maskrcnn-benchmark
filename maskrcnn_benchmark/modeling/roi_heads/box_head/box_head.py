@@ -50,7 +50,7 @@ class ROIBoxHead(torch.nn.Module):
 
         # self.evaluation_flags = cfg.TEST.EVALUATION_FLAGS
 
-    def forward(self, features, proposals, targets=None):
+    def forward(self, features, proposals, targets=None, path=None):
         """
         Arguments:
             features (list[Tensor]): feature-maps from possibly several levels
@@ -146,15 +146,15 @@ class ROIBoxHead(torch.nn.Module):
             # result = self.post_processor((class_logits_fc, box_regression_fc), proposals)
             ## results from conv + fc
             # result = self.post_processor((class_logits_combine, box_regression_combine), proposals)
-            print (class_logits.shape)
-            print (box_regression.shape)
+            # print (class_logits.shape)
+            # print (box_regression.shape)
             result = []
             for i in range(self.num_evaluation):
-                result_ = self.post_processor[i]((class_logits, box_regression, class_logits_fc, box_regression_fc), proposals)
+                result_ = self.post_processor[i]((class_logits, box_regression, class_logits_fc, box_regression_fc), proposals, path)
                 result.append(result_)
-            print (len(result))
-            print (result)
-            exit()
+            # print (len(result))
+            # print (result)
+            # exit()
             return x, result, {}
 
         loss_classifier, loss_box_reg = self.loss_evaluator(

@@ -32,3 +32,5 @@ dist/
 log.txt
 last_checkpoint
 /inference
+/weights
+*.mat

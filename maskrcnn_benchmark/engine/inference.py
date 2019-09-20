@@ -22,17 +22,21 @@ def compute_on_dataset(model, data_loader, device):
     # results_dict = {}
     cpu_device = torch.device("cpu")
     for i, batch in enumerate(tqdm(data_loader)):
-        if i != 3:
-            continue
+        # if i < 249:
+        # if i > 1:
+        #     break
+        #     continue
+        # images, targets, image_ids, path = batch
         images, targets, image_ids = batch
-        print (targets)
-        print (targets[0].bbox)
-        print (targets[0].extra_fields)
+        # print (targets)
+        # print (targets[0].bbox)
+        # print (targets[0].extra_fields)
+        # print (image_ids)
         images = images.to(device)
         targets[0].bbox = targets[0].bbox.to(device)
         with torch.no_grad():
             # output = model(images)
-            output = model(images, targets)
+            output = model(images, targets, image_ids)
             # print (len(output))
             # exit()
             # for out in output:
@@ -40,15 +44,16 @@ def compute_on_dataset(model, data_loader, device):
             #     exit()
             output = [[o.to(cpu_device) for o in out] for out in output]
 
-        for j, out in enumerate(output):
-            results_dict_list[j].update(
-                {img_id: result for img_id, result in zip(image_ids, out)}
-            )
+        ## for j, out in enumerate(output):
+        ##     results_dict_list[j].update(
+        ##         {img_id: result for img_id, result in zip(image_ids, out)}
+        ##     )
         # if i == 10:
-        if i == 3:
-            exit() 
-            break
+        # if i == 3:
+        #     exit() 
+        #     break
     ## remove empty dicts
+    exit()
     results_dict_list_ = []
     for results_dict in results_dict_list:
         print (len(results_dict.keys()))

@@ -1,0 +1,7 @@
+ ls weights/*conv* > conv.txt
+ ls weights/*fc* > fc.txt
+ python read_weights.py fc.txt 
+ python read_weights.py conv.txt 
+
+
+
