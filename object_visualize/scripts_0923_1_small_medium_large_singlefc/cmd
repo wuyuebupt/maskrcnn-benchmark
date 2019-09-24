@@ -1,0 +1,9 @@
+ls weights/|grep conv > conv.txt
+ls weights/ |grep fc > fc.txt
+# ls weights/|grep conv |shuf|head -5000> conv.txt
+# ls weights/ |grep fc |shuf|head -5000> fc.txt
+nohup python read_weights_mean.py fc.txt 1>fc.log 2>&1  &
+nohup python read_weights_mean.py conv.txt 1>conv.log 2>&1 & 
+
+
+

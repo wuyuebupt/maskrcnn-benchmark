@@ -110,7 +110,7 @@ class GeneralizedRCNN(nn.Module):
 
         num_objs = proposals[0].extra_fields['labels'].shape[0] 
         # print (num_objs)
-        # print (path)
+        print (path)
         # exit()
 
         ## loop for all objects
@@ -136,8 +136,8 @@ class GeneralizedRCNN(nn.Module):
 
             ## expend the gt bbox
             # neighbors = self.expand_bbox(selected_gt, 35, 0.75)
-            # neighbors = self.expand_bbox(selected_gt, 35, 1.0)
-            neighbors = self.expand_bbox(selected_gt, 35, 1.25)
+            neighbors = self.expand_bbox(selected_gt, 35, 1.0)
+            # neighbors = self.expand_bbox(selected_gt, 35, 1.25)
             # neighbors = self.expand_bbox(selected_gt, 0, 1.0)
             # print (neighbors)
             # exit()

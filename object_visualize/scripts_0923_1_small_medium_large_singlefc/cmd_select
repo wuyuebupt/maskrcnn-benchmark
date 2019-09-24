@@ -1,0 +1,1 @@
+cat conv.txt|grep class_6_|shuf|head -1000 > conv-debug

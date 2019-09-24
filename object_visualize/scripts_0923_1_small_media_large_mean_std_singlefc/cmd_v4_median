@@ -1,0 +1,11 @@
+ls weights/|grep conv > conv.txt
+ls weights/ |grep fc > fc.txt
+nohup python read_weights_statistic_v4_median.py fc.txt 1 1>fc.log 2>&1  &
+nohup python read_weights_statistic_v4_median.py fc.txt 2 1>fc.log 2>&1  &
+nohup python read_weights_statistic_v4_median.py fc.txt 3 1>fc.log 2>&1  &
+nohup python read_weights_statistic_v4_median.py conv.txt 1 1>conv.log 2>&1 & 
+nohup python read_weights_statistic_v4_median.py conv.txt 2 1>conv.log 2>&1 & 
+nohup python read_weights_statistic_v4_median.py conv.txt 3 1>conv.log 2>&1 & 
+
+
+

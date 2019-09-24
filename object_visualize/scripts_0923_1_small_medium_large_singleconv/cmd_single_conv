@@ -1,0 +1,5 @@
+ls weights/|grep conv > conv.txt
+nohup python read_weights_mean.py conv.txt 1>conv.log 2>&1 & 
+
+
+

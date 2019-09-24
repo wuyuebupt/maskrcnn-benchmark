@@ -1,0 +1,5 @@
+ls weights/ |grep fc > fc.txt
+nohup python read_weights_mean.py fc.txt 1>fc.log 2>&1  &
+
+
+
