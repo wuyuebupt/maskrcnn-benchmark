@@ -13,6 +13,9 @@ from ..rpn.rpn import build_rpn
 from ..roi_heads.roi_heads import build_roi_heads
 
 from maskrcnn_benchmark.structures.bounding_box import BoxList
+from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
+
+
 
 class GeneralizedRCNN(nn.Module):
     """
@@ -109,13 +112,19 @@ class GeneralizedRCNN(nn.Module):
         # print (proposals[0].extra_fields['labels'])
 
         num_objs = proposals[0].extra_fields['labels'].shape[0] 
-        # print (num_objs)
+        print (num_objs)
         print (path)
-        # exit()
+
+        ## compute gt iou, max occlusion scores for each gt 
+        gts = proposals[0]
+        print (gts)
+        match_quality_matrix = boxlist_iou(gts, gts)
+        # print (match_quality_matrix)
 
         ## loop for all objects
         result = []
         for target_index in range(num_objs):
+
             # if target_index == 2:
             #     break
             ## reduce target and  generate bboxlist
@@ -123,6 +132,20 @@ class GeneralizedRCNN(nn.Module):
             print (target_index)
             print (proposals[0].bbox.shape)
             selected_gt = proposals[0].bbox[target_index,:]
+
+            ### find the occlusion
+            if num_objs > 1:
+                ious = match_quality_matrix[target_index, :]
+                print (ious)
+                ious_ = torch.cat([ious[:target_index], ious[target_index+1:]])
+                print (ious_)
+                max_ind = torch.argmax(ious_)
+                max_iou = ious_[max_ind]
+                print (max_ind, max_iou)
+            else:
+                max_iou = torch.tensor(0.0)
+
+            ### save to file 
 
             # print (selected_gt)
             selected_gt = selected_gt.reshape(-1, 4)
@@ -136,9 +159,9 @@ class GeneralizedRCNN(nn.Module):
 
             ## expend the gt bbox
             # neighbors = self.expand_bbox(selected_gt, 35, 0.75)
-            neighbors = self.expand_bbox(selected_gt, 35, 1.0)
+            # neighbors = self.expand_bbox(selected_gt, 35, 1.0)
             # neighbors = self.expand_bbox(selected_gt, 35, 1.25)
-            # neighbors = self.expand_bbox(selected_gt, 0, 1.0)
+            neighbors = self.expand_bbox(selected_gt, 0, 1.0)
             # print (neighbors)
             # exit()
             
@@ -146,6 +169,7 @@ class GeneralizedRCNN(nn.Module):
             # boxlist = BoxList(selected_gt, image_shape, mode="xyxy")
             boxlist = BoxList(neighbors, image_shape, mode="xyxy")
             boxlist.add_field('labels', label)
+            boxlist.add_field('occlusion_iou', max_iou)
       
             # print (boxlist)
             ## bug was here
