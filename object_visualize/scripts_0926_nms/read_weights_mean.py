@@ -53,7 +53,7 @@ if __name__ == '__main__':
     # datafile = 'weights-run1/' + line
     # data = sio.loadmat(line)
     data = sio.loadmat(datafile)
-    print (data)
+    # print (data)
     
     iou_before_max = data['iou_before']
     iou_after = data['iou_after']
@@ -63,8 +63,10 @@ if __name__ == '__main__':
 
     if iou_before_max < -0.5:
         continue
-    print(iou_before_max, iou_after)
-    print(prob_before_iou_max, prob_after_max)
+
+    if prob_after_max < prob_before_iou_max:
+        print(prob_before_iou_max, prob_after_max)
+        print(iou_before_max, iou_after)
 
     iou_before_nms.append(iou_before_max)
     iou_after_nms.append(iou_after)

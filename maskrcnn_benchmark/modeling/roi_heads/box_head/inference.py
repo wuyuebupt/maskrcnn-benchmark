@@ -312,6 +312,9 @@ class PostProcessor(nn.Module):
                 boxlist_for_class, self.nms
             )
 
+            if boxlist_for_class.bbox.shape[0] > 1:
+                return [], []
+
             match_quality_matrix = boxlist_iou(gt_boxlist, boxlist_for_class)
             match_quality_matrix = match_quality_matrix.reshape(-1)
             # print (match_quality_matrix)
