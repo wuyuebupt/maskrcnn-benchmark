@@ -9,6 +9,9 @@ from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 import scipy.io as sio
 
+from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
+import numpy as np
+
 
 class PostProcessor(nn.Module):
     """
@@ -104,7 +107,11 @@ class PostProcessor(nn.Module):
         # print (boxes_per_image)
         # gt_labels = boxes[0].extra_fields['labels']
         gt_labels = boxes[0].extra_fields['labels']
+        gt_box = boxes[0].extra_fields['gt_box']
         print (gt_labels)
+        print (gt_box)
+        # exit()
+
         if self.cls_agnostic_bbox_reg:
             box_regression = box_regression[:, -4:]
 
@@ -113,7 +120,7 @@ class PostProcessor(nn.Module):
             box_regression.view(sum(boxes_per_image), -1), concat_boxes
         )
         # print (proposals.shape)
-        # get the gt bbox
+        ## get the gt bbox
         proposals = proposals[:, 4*gt_labels:4*gt_labels+4]
         # print (proposals.shape)
         # exit()
@@ -138,17 +145,37 @@ class PostProcessor(nn.Module):
         proposals = proposals.split(boxes_per_image, dim=0)
         class_prob = class_prob.split(boxes_per_image, dim=0)
         # print (proposals)
-        # print (prop)
+        # print (class_prob.shape)
+        # exit()
 
         results = []
         for prob, boxes_per_img, image_shape in zip(
             class_prob, proposals, image_shapes
         ):
+            print (boxes_per_img.shape)
+            print (prob.shape)
             boxlist = self.prepare_boxlist(boxes_per_img, prob, image_shape)
+            boxlist.add_field('labels', gt_labels)
+            boxlist.add_field('gt_box', gt_box)
+
             boxlist = boxlist.clip_to_image(remove_empty=False)
-            # print (boxlist)
+            print (boxlist)
             # print (boxlist.bbox)
             # print (boxlist.extra_fields['scores'])
+            boxlist, iou_prob = self.filter_results_nms_analysis(boxlist, num_classes)
+            if len(iou_prob) == 0:
+                iou_before  = -1 
+                prob_before = -1 
+                iou_after   = -1 
+                prob_after  = -1 
+                continue
+            # print (boxlist)
+            print (iou_prob)
+            iou_before  = iou_prob[0].cpu().detach().numpy()
+            prob_before = iou_prob[1].cpu().detach().numpy()
+            iou_after   = iou_prob[2].cpu().detach().numpy()
+            prob_after  = iou_prob[3].cpu().detach().numpy()
+
             out_boxes_np  = boxlist.bbox.cpu().detach().numpy()
             cls_np  = boxlist.extra_fields['scores'].cpu().detach().numpy()
             # boxlist = self.filter_results(boxlist, num_classes)
@@ -156,7 +183,6 @@ class PostProcessor(nn.Module):
             # print (boxlist.bbox)
             # print (boxlist.extra_fields['scores'])
             # print (boxlist.extra_fields['labels'])
-
          
             results.append(boxlist)
         ## 
@@ -170,7 +196,9 @@ class PostProcessor(nn.Module):
             save_name = 'weights/' + path + '_bbox_weight_shoudNotHappen.mat'
         print (save_name)
 
-        sio.savemat(save_name, {'bbox': concat_boxes_np, 'out_bbox':out_boxes_np, 'cls':cls_np})
+        # sio.savemat(save_name, {'bbox': concat_boxes_np, 'out_bbox':out_boxes_np, 'cls':cls_np})
+        sio.savemat(save_name, {'iou_before': iou_before, 'iou_after': iou_after, 'prob_before': prob_before, 'prob_after': prob_after})
+
         # sio.savemat('bbox_weight.mat', {'bbox': concat_boxes_np, 'out_bbox':out_boxes_np, 'cls':cls_np})
         return results
 
@@ -192,6 +220,131 @@ class PostProcessor(nn.Module):
         boxlist = BoxList(boxes, image_shape, mode="xyxy")
         boxlist.add_field("scores", scores)
         return boxlist
+
+    def gt_filter_results(self, boxlist, gt_box):
+        # print (boxlist)
+        # print (gt_box)
+        image_shape = boxlist.size
+        # print (image_shape)
+        gt_boxlist = self.prepare_boxlist(gt_box, np.ones(1,), image_shape)
+        # print (gt_boxlist)
+        match_quality_matrix = boxlist_iou(gt_boxlist, boxlist)
+        # print (match_quality_matrix)
+        # print (match_quality_matrix.shape)
+        match_quality_matrix = match_quality_matrix.reshape(-1)
+        # print (match_quality_matrix.shape)
+        pos_ind = torch.nonzero(match_quality_matrix > 0).squeeze(1)
+
+        # print (pos_ind)
+        selected_boxes = boxlist.bbox[pos_ind]
+        # print (selected_boxes)
+        # print (selected_boxes.shape)
+        scores = boxlist.extra_fields['scores']
+        # print (scores)
+        # print (scores.shape)
+        selected_scores = scores[pos_ind]
+        # print (selected_scores)
+        selected_boxlist = self.prepare_boxlist(selected_boxes, selected_scores, boxlist.size)
+        # print (selected_boxlist)
+        # exit()
+        return selected_boxlist
+
+
+
+
+    def filter_results_nms_analysis(self, boxlist, num_classes):
+        """Returns bounding-box detection results by thresholding on scores and
+        applying non-maximum suppression (NMS).
+        """
+        # unwrap the boxlist to avoid additional overhead.
+        # if we had multi-class NMS, we could perform this directly on the boxlist
+        # boxes = boxlist.bbox.reshape(-1, num_classes * 4)
+        # scores = boxlist.get_field("scores").reshape(-1, num_classes)
+        boxes = boxlist.bbox.reshape(-1, 4)
+        scores = boxlist.get_field("scores").reshape(-1, 1)
+        gt_labels = boxlist.get_field("labels")
+        gt_box = boxlist.get_field("gt_box")
+        # print (boxlist.extra_fields)
+        print (boxes.shape)
+        print (scores.shape)
+        print (gt_box)
+        # exit()
+
+        device = scores.device
+        result = []
+        result_iou_prob = []
+        # Apply threshold on detection probabilities and apply NMS
+        # Skip j = 0, because it's the background class
+        inds_all = scores > self.score_thresh
+        print (inds_all)
+        # for j in range(1, num_classes):
+        for j in range(1):
+            inds = inds_all[:, j].nonzero().squeeze(1)
+            print (inds)
+            # if  
+            #     return [], []
+            scores_j = scores[inds, j]
+            boxes_j = boxes[inds, j * 4 : (j + 1) * 4]
+            boxlist_for_class = BoxList(boxes_j, boxlist.size, mode="xyxy")
+            boxlist_for_class.add_field("scores", scores_j)
+
+            ### gt filter and match make sure their is only one output at the end
+            boxlist_for_class = self.gt_filter_results(boxlist_for_class, gt_box) 
+            if boxlist_for_class.bbox.shape[0] == 0:
+                return [], []
+            print (boxlist_for_class.bbox.shape)
+
+            ### nms
+            ## before nms, calculate max 
+            gt_boxlist = self.prepare_boxlist(gt_box, np.ones(1,), boxlist_for_class.size)
+            match_quality_matrix = boxlist_iou(gt_boxlist, boxlist_for_class)
+            match_quality_matrix = match_quality_matrix.reshape(-1)
+            # print (match_quality_matrix)
+            max_ind = torch.argmax(match_quality_matrix)
+            max_iou_before = match_quality_matrix[max_ind]
+            prob_before = boxlist_for_class.extra_fields['scores'][max_ind]
+            # print (max_iou_before)
+            #  print (prob_before)
+            # print (boxlist_for_class)
+           
+              
+            boxlist_for_class = boxlist_nms(
+                boxlist_for_class, self.nms
+            )
+
+            match_quality_matrix = boxlist_iou(gt_boxlist, boxlist_for_class)
+            match_quality_matrix = match_quality_matrix.reshape(-1)
+            # print (match_quality_matrix)
+            max_ind = torch.argmax(match_quality_matrix)
+            max_iou_after = match_quality_matrix[max_ind]
+            prob_after = boxlist_for_class.extra_fields['scores'][max_ind]
+
+            # print (max_iou_after)
+            # print (prob_after)
+            # print (boxlist_for_class)
+            # exit()
+           
+            result_iou_prob = [max_iou_before, prob_before, max_iou_after, prob_after]
+ 
+            num_labels = len(boxlist_for_class)
+            boxlist_for_class.add_field(
+                "labels", torch.full((num_labels,), j, dtype=torch.int64, device=device)
+            )
+            result.append(boxlist_for_class)
+
+        result = cat_boxlist(result)
+        number_of_detections = len(result)
+
+        # Limit to max_per_image detections **over all classes**
+        if number_of_detections > self.detections_per_img > 0:
+            cls_scores = result.get_field("scores")
+            image_thresh, _ = torch.kthvalue(
+                cls_scores.cpu(), number_of_detections - self.detections_per_img + 1
+            )
+            keep = cls_scores >= image_thresh.item()
+            keep = torch.nonzero(keep).squeeze(1)
+            result = result[keep]
+        return result, result_iou_prob
 
     def filter_results(self, boxlist, num_classes):
         """Returns bounding-box detection results by thresholding on scores and

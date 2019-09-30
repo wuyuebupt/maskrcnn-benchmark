@@ -97,8 +97,10 @@ class GeneralizedRCNN(nn.Module):
         # print (images)
         # exit()
         features = self.backbone(images.tensors)
-        proposals, proposal_losses = self.rpn(images, features, targets)
-        # print (proposals)
+        proposals_rpn, proposal_losses = self.rpn(images, features, targets)
+        print (proposals_rpn)
+        # print (proposals_rpn[0].extra_fields)
+        # exit()
 
 
         proposals = [targets[0]]
@@ -126,7 +128,7 @@ class GeneralizedRCNN(nn.Module):
 
             # print (selected_gt)
             selected_gt = selected_gt.reshape(-1, 4)
-            image_shape=  proposals[0].size
+            image_shape =  proposals[0].size
             # print (image_shape)
             label = int(targets[0].extra_fields['labels'][target_index])
             print (label)
@@ -136,18 +138,27 @@ class GeneralizedRCNN(nn.Module):
 
             ## expend the gt bbox
             # neighbors = self.expand_bbox(selected_gt, 35, 0.75)
-            neighbors = self.expand_bbox(selected_gt, 35, 1.0)
+            # neighbors = self.expand_bbox(selected_gt, 35, 1.0)
             # neighbors = self.expand_bbox(selected_gt, 35, 1.25)
-            # neighbors = self.expand_bbox(selected_gt, 0, 1.0)
-            # print (neighbors)
-            # exit()
+            neighbors = self.expand_bbox(selected_gt, 0, 1.0)
+            print (neighbors)
             
              
             # boxlist = BoxList(selected_gt, image_shape, mode="xyxy")
+            # boxlist = BoxList(neighbors, image_shape, mode="xyxy")
+
+            ### v1 
             boxlist = BoxList(neighbors, image_shape, mode="xyxy")
+            # boxlist.add_field('labels', label)
+
+            ## 
+            boxlist = proposals_rpn[0]
             boxlist.add_field('labels', label)
+            boxlist.add_field('gt_box', neighbors)
       
-            # print (boxlist)
+            print (boxlist)
+            print (boxlist.extra_fields['labels'])
+            print (boxlist.extra_fields['gt_box'])
             ## bug was here
             proposals_ = [boxlist]
 
