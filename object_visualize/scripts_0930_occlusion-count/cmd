@@ -1,0 +1,5 @@
+ls weights/|grep occlusion > occlusion.txt
+nohup python read_weights_mean.py occlusion.txt 1>occlusion.log 2>&1  &
+
+
+
