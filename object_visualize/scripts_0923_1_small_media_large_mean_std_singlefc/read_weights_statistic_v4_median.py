@@ -170,8 +170,9 @@ if __name__ == '__main__':
 
     for i in range(s_):
       for j in range(s_):
-        iou_cls_bin[iou_index[i,j]].append(cls[i,j])
-        iou_out_bin[iou_index[i,j]].append(out_iou[i,j])
+        if cls[i,j] > 0.05:
+          iou_cls_bin[iou_index[i,j]].append(cls[i,j])
+          iou_out_bin[iou_index[i,j]].append(out_iou[i,j])
 
     count = count + 1
 
