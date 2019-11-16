@@ -135,8 +135,8 @@ class GeneralizedRCNN(nn.Module):
             # print (selected_gt)
 
             ## expend the gt bbox
-            # neighbors = self.expand_bbox(selected_gt, 35, 0.75)
-            neighbors = self.expand_bbox(selected_gt, 35, 1.0)
+            neighbors = self.expand_bbox(selected_gt, 35, 0.75)
+            # neighbors = self.expand_bbox(selected_gt, 35, 1.0)
             # neighbors = self.expand_bbox(selected_gt, 35, 1.25)
             # neighbors = self.expand_bbox(selected_gt, 0, 1.0)
             # print (neighbors)

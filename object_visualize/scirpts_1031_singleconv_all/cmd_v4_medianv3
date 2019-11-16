@@ -1,0 +1,1 @@
+python read_weights_statistic_v4_median.py conv.txt 4 1>conv.log 2>&1 

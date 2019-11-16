@@ -1,0 +1,9 @@
+cd scirpts_1111_double_all/
+sh cmd_v4_medianv3
+cd ..
+cd scirpts_1031_singlefc_all/
+sh cmd_v4_medianv3
+cd ..
+cd scirpts_1031_singleconv_all/
+sh cmd_v4_medianv3
+cd ..

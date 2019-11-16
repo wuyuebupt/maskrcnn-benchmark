@@ -1,0 +1,7 @@
+ls weights_100/|grep conv > conv.txt
+nohup python read_weights_statistic_v4_median.py conv.txt 1 1>conv.log 2>&1 & 
+nohup python read_weights_statistic_v4_median.py conv.txt 2 1>conv.log 2>&1 & 
+nohup python read_weights_statistic_v4_median.py conv.txt 3 1>conv.log 2>&1 & 
+
+
+

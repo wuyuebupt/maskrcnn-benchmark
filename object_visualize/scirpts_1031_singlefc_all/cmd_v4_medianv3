@@ -1,0 +1,4 @@
+python read_weights_statistic_v4_median.py fc.txt 4 1>fc.log 2>&1
+
+
+
