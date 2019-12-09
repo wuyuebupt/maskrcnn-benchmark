@@ -490,14 +490,15 @@ def main():
     ### save weight to mat
     # print (model)
     # print (model.roi_heads.box.feature_extractor.fc6)
-    # print (model.roi_heads.box.feature_extractor.fc6.weight)
-    # print (model.roi_heads.box.feature_extractor.fc6.bias)
+    print (model.roi_heads.box.feature_extractor.fc6.weight)
+    print (model.roi_heads.box.feature_extractor.fc6.bias)
 
-    # fc6_weight_numpy = model.roi_heads.box.feature_extractor.fc6.weight.cpu().detach().numpy()
+    fc6_weight_numpy = model.roi_heads.box.feature_extractor.fc6.weight.cpu().detach().numpy()
+    fc6_bias_numpy   = model.roi_heads.box.feature_extractor.fc6.bias.cpu().detach().numpy()
     # print (fc6_weight_numpy)
     # print (fc6_weight_numpy.shape)
-    # sio.savemat('fc6_weight.mat', {'w': fc6_weight_numpy})
-    # exit()
+    sio.savemat('fc6_weight.mat', {'w': fc6_weight_numpy, 'b':fc6_bias_numpy})
+    exit()
     if not args.skip_test:
         test(cfg, model, args.distributed)
 

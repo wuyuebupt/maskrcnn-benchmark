@@ -75,17 +75,35 @@ class ROIBoxHead(torch.nn.Module):
         # feature_extractor generally corresponds to the pooler + heads
         # print (features[1].shape)
         # exit()
-        
+        print (len(features)) 
+        print (features[1].shape)
         x = self.feature_extractor(features, proposals)
         # final classifier that converts the features into predictions
         # class_logits, box_regression = self.predictor(x)
+        print (len(x))
+        print (x[0].shape)
+        print (x[1].shape)
+        print (x[2].shape)
+
+        print (x[5].shape)
+        print (x[6].shape)
+        print (x[7].shape)
+        print (x[8].shape)
+        conv_after_roialign = x[5]
+        conv_before_avgpool = x[6]
+        conv_after_avgpool  = x[7]
+        fc_after_roialign   = x[8]
+        fc_first            = x[9]
+        fc_last_output      = x[2]
+
         class_logits, box_regression, class_logits_fc, box_regression_fc, mask, mask_fc = self.predictor(x)
 
         if not self.training:
-            # print (class_logits.shape)
-            # print (box_regression.shape)
-            # print (class_logits_fc.shape)
-            # print (box_regression_fc.shape)
+            print (class_logits.shape)
+            print (box_regression.shape)
+            print (class_logits_fc.shape)
+            print (box_regression_fc.shape)
+            # exit()
             # print (len(proposals))
             # print ((proposals[0]))
             # print (levels)
@@ -150,7 +168,15 @@ class ROIBoxHead(torch.nn.Module):
             # print (box_regression.shape)
             result = []
             for i in range(self.num_evaluation):
-                result_ = self.post_processor[i]((class_logits, box_regression, class_logits_fc, box_regression_fc), proposals, path)
+                result_ = self.post_processor[i]((class_logits, box_regression, class_logits_fc, box_regression_fc, conv_after_roialign, conv_before_avgpool, conv_after_avgpool, fc_after_roialign, fc_first, fc_last_output), proposals, path)
+
+                # conv_after_roialign = x[5]
+                # conv_before_avgpool = x[6]
+                # conv_after_avgpool  = x[7]
+                # fc_after_roialign   = x[8]
+                # fc_last_output      = x[2]
+
+
                 result.append(result_)
             # print (len(result))
             # print (result)

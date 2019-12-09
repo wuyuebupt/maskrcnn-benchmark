@@ -145,14 +145,14 @@ class GeneralizedRCNN(nn.Module):
             
              
             # boxlist = BoxList(selected_gt, image_shape, mode="xyxy")
-            # boxlist = BoxList(neighbors, image_shape, mode="xyxy")
+            boxlist = BoxList(neighbors, image_shape, mode="xyxy")
 
             ### v1 
-            boxlist = BoxList(neighbors, image_shape, mode="xyxy")
+            # boxlist = BoxList(neighbors, image_shape, mode="xyxy")
             # boxlist.add_field('labels', label)
 
-            ## 
-            boxlist = proposals_rpn[0]
+            ## real proposals 
+            # boxlist = proposals_rpn[0]
             boxlist.add_field('labels', label)
             boxlist.add_field('gt_box', neighbors)
       

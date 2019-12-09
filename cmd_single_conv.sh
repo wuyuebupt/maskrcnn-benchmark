@@ -71,7 +71,7 @@ python  tools/train_net.py \
 --conv-fc-threshold 224 \
 --lr-steps 100 200 300 \
 --stop-gradient 1 1 1 1 \
---evaluation-flags 1 1 0 0
+--evaluation-flags 1 0 0 0
 
 ###### --stop-gradient
 # conv cls

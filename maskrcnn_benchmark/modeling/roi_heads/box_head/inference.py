@@ -61,7 +61,7 @@ class PostProcessor(nn.Module):
         """
         # class_logits, box_regression = x
         # class_prob = F.softmax(class_logits, -1)
-        class_logits_conv, box_regression_conv,  class_logits_fc, box_regression_fc = x
+        class_logits_conv, box_regression_conv,  class_logits_fc, box_regression_fc, conv_after_roialign, conv_before_avgpool, conv_after_avgpool, fc_after_roialign, fc_first, fc_last_output = x
         class_prob_conv = F.softmax(class_logits_conv, -1)
         class_prob_fc = F.softmax(class_logits_fc, -1)
 
@@ -134,7 +134,7 @@ class PostProcessor(nn.Module):
         num_classes = class_prob.shape[1]
 
         # print (proposals)
-        # print (class_prob.shape)
+        print (class_prob.shape)
 
         ## selected gt
         class_prob = class_prob[:, gt_labels]
@@ -142,18 +142,31 @@ class PostProcessor(nn.Module):
         ## save all prob
         # class_prob = class_prob
 
-        # print (class_prob.shape)
+        print (class_prob.shape)
         concat_boxes = concat_boxes.split(boxes_per_image, dim=0)
         proposals = proposals.split(boxes_per_image, dim=0)
         class_prob = class_prob.split(boxes_per_image, dim=0)
+
+        ## for features
+        conv_after_roialign = conv_after_roialign.split(boxes_per_image, dim=0)
+        conv_before_avgpool = conv_before_avgpool.split(boxes_per_image, dim=0)
+        conv_after_avgpool  = conv_after_avgpool.split(boxes_per_image, dim=0)
+        fc_after_roialign   = fc_after_roialign.split(boxes_per_image, dim=0)
+        fc_first            = fc_first.split(boxes_per_image, dim=0)
+        fc_last_output      = fc_last_output.split(boxes_per_image, dim=0)
+
+
+        # conv_after_roialign, conv_before_avgpool, conv_after_avgpool, fc_after_roialign, fc_last_output
+
         # print (proposals)
         # print (class_prob.shape)
         # exit()
 
         results = []
-        for prob, boxes_per_img, concat_box, image_shape in zip(
-            class_prob, proposals, concat_boxes, image_shapes
-        ):
+        for prob, boxes_per_img, concat_box, image_shape, conv_after_roi, conv_before_avg, conv_after_avg, fc_after_roi, fc_first_, fc_last_out in zip(
+            class_prob, proposals, concat_boxes, image_shapes,
+            conv_after_roialign, conv_before_avgpool, conv_after_avgpool, 
+            fc_after_roialign, fc_first, fc_last_output):
             print (boxes_per_img.shape)
             print (prob.shape)
             boxlist = self.prepare_boxlist(boxes_per_img, prob, image_shape)
@@ -162,6 +175,14 @@ class PostProcessor(nn.Module):
             boxlist.add_field('gt_box', gt_box)
             boxlist_proposal.add_field('labels', gt_labels)
             boxlist_proposal.add_field('gt_box', gt_box)
+            boxlist_proposal.add_field('conv_after_roi', conv_after_roi)
+            boxlist_proposal.add_field('conv_before_avg', conv_before_avg)
+            boxlist_proposal.add_field('conv_after_avg', conv_after_avg)
+            boxlist_proposal.add_field('fc_after_roi', fc_after_roi)
+            boxlist_proposal.add_field('fc_first_', fc_first_)
+            boxlist_proposal.add_field('fc_last_out', fc_last_out)
+
+
 
             boxlist = boxlist.clip_to_image(remove_empty=False)
             boxlist_proposal = boxlist_proposal.clip_to_image(remove_empty=False)
@@ -175,14 +196,35 @@ class PostProcessor(nn.Module):
                 iou_after   = -1 
                 prob_after  = -1 
                 iou_before_proposal = -1 
+
+
+                conv_after_roi  = -1 
+                conv_before_avg = -1 
+                conv_after_avg  = -1 
+                fc_after_roi    = -1 
+                fc_first_       = -1 
+                fc_last_out     = -1 
                 continue
             # print (boxlist)
-            print (iou_prob)
+            # print (iou_prob)
             iou_before  = iou_prob[0].cpu().detach().numpy()
             prob_before = iou_prob[1].cpu().detach().numpy()
             iou_after   = iou_prob[2].cpu().detach().numpy()
             prob_after  = iou_prob[3].cpu().detach().numpy()
             iou_before_proposal  = iou_prob[4].cpu().detach().numpy()
+
+            ## features
+            
+            conv_after_roi  = iou_prob[5].cpu().detach().numpy()
+            conv_before_avg = iou_prob[6].cpu().detach().numpy()
+            conv_after_avg  = iou_prob[7].cpu().detach().numpy()
+            fc_after_roi    = iou_prob[8].cpu().detach().numpy()
+            fc_first_       = iou_prob[9].cpu().detach().numpy()
+            fc_last_out     = iou_prob[10].cpu().detach().numpy()
+            # print (conv_after_roi_j.shape)
+            # print ("detach features")
+            # exit()
+
 
 
             out_boxes_np  = boxlist.bbox.cpu().detach().numpy()
@@ -206,7 +248,17 @@ class PostProcessor(nn.Module):
         print (save_name)
 
         # sio.savemat(save_name, {'bbox': concat_boxes_np, 'out_bbox':out_boxes_np, 'cls':cls_np})
-        sio.savemat(save_name, {'iou_before': iou_before, 'iou_after': iou_after, 'prob_before': prob_before, 'prob_after': prob_after, 'iou_before_proposal': iou_before_proposal})
+        # sio.savemat(save_name, {'iou_before': iou_before, 'iou_after': iou_after, 'prob_before': prob_before, 'prob_after': prob_after, 'iou_before_proposal': iou_before_proposal})
+
+        sio.savemat(save_name, {
+                                 'conv_after_roi': conv_after_roi, 
+                                 'conv_before_avg': conv_before_avg, 
+                                 'conv_after_avg': conv_after_avg, 
+                                 'fc_after_roi': fc_after_roi, 
+                                 'fc_first_': fc_first_, 
+                                 'fc_last_out': fc_last_out 
+        })
+        # exit()
 
         # sio.savemat('bbox_weight.mat', {'bbox': concat_boxes_np, 'out_bbox':out_boxes_np, 'cls':cls_np})
         return results
@@ -248,8 +300,8 @@ class PostProcessor(nn.Module):
         selected_boxes = boxlist.bbox[pos_ind]
         selected_boxes_proposal = boxlist_proposal.bbox[pos_ind]
         # print (selected_boxes)
-        print (selected_boxes.shape)
-        print (selected_boxes_proposal.shape)
+        # print (selected_boxes.shape)
+        # print (selected_boxes_proposal.shape)
 
 
         scores = boxlist.extra_fields['scores']
@@ -276,6 +328,23 @@ class PostProcessor(nn.Module):
         # scores = boxlist.get_field("scores").reshape(-1, num_classes)
         boxes = boxlist.bbox.reshape(-1, 4)
         boxes_proposal = boxlist_proposal.bbox.reshape(-1, 4)
+
+        ### for features
+        conv_after_roi  = boxlist_proposal.get_field("conv_after_roi")
+        conv_before_avg = boxlist_proposal.get_field("conv_before_avg")
+        conv_after_avg  = boxlist_proposal.get_field("conv_after_avg")
+        fc_after_roi    = boxlist_proposal.get_field("fc_after_roi")
+        fc_first_       = boxlist_proposal.get_field("fc_first_")
+        fc_last_out     = boxlist_proposal.get_field("fc_last_out")
+        
+        # boxlist_proposal.add_field('conv_after_roi', conv_after_roi)
+        # boxlist_proposal.add_field('conv_before_avg', conv_before_avg)
+        # boxlist_proposal.add_field('conv_after_avg', conv_after_avg)
+        # boxlist_proposal.add_field('fc_after_roi', fc_after_roi)
+        # boxlist_proposal.add_field('fc_last_out', fc_last_out)
+        ###
+
+
         scores = boxlist.get_field("scores").reshape(-1, 1)
         gt_labels = boxlist.get_field("labels")
         gt_box = boxlist.get_field("gt_box")
@@ -283,7 +352,7 @@ class PostProcessor(nn.Module):
         print (boxes.shape)
         print (boxes_proposal.shape)
         print (scores.shape)
-        print (gt_box)
+        # print (gt_box)
 
         device = scores.device
         result = []
@@ -291,14 +360,26 @@ class PostProcessor(nn.Module):
         # Apply threshold on detection probabilities and apply NMS
         # Skip j = 0, because it's the background class
         inds_all = scores > self.score_thresh
-        print (inds_all)
+        # print (inds_all)
         # for j in range(1, num_classes):
         for j in range(1):
             inds = inds_all[:, j].nonzero().squeeze(1)
-            print (inds)
+            # print (inds)
             # if  
             #     return [], []
             scores_j = scores[inds, j]
+
+            conv_after_roi_j  = conv_after_roi[inds]
+            conv_before_avg_j = conv_before_avg[inds]
+            conv_after_avg_j  = conv_after_avg[inds]
+            fc_after_roi_j    = fc_after_roi[inds]
+            fc_first_j        = fc_first_[inds]
+            fc_last_out_j     = fc_last_out[inds]
+            # print (inds)
+            # print (conv_after_roi_j.shape)
+            # exit()
+
+
             boxes_j = boxes[inds, j * 4 : (j + 1) * 4]
             boxes_j_proposal = boxes_proposal[inds, j * 4 : (j + 1) * 4]
             boxlist_for_class = BoxList(boxes_j, boxlist.size, mode="xyxy")
@@ -339,8 +420,8 @@ class PostProcessor(nn.Module):
             #  print (prob_before)
             # print (boxlist_for_class)
            
-            print (match_quality_matrix_pre)
-            print (match_quality_matrix_pre.shape)
+            # print (match_quality_matrix_pre)
+            # print (match_quality_matrix_pre.shape)
             
             # exit()
               
@@ -365,7 +446,14 @@ class PostProcessor(nn.Module):
             # exit()
            
             # result_iou_prob = [max_iou_before, prob_before, max_iou_after, prob_after]
-            result_iou_prob = [iou_before, prob_before, max_iou_after, prob_after, iou_before_proposal]
+            result_iou_prob = [iou_before, prob_before, max_iou_after, prob_after, iou_before_proposal, 
+            conv_after_roi_j , 
+            conv_before_avg_j, 
+            conv_after_avg_j , 
+            fc_after_roi_j   , 
+            fc_first_j   , 
+            fc_last_out_j     
+                              ]
  
             num_labels = len(boxlist_for_class)
             boxlist_for_class.add_field(

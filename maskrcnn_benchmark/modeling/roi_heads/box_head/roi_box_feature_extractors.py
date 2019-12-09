@@ -286,6 +286,11 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         # print (x[0].shape)
         x_conv, mask = self.pooler_conv(x_conv, proposals)
         x_fc, mask_fc = self.pooler_fc(x_fc, proposals)
+
+        ###  conv back
+        x_conv_after_pool = x_conv
+        x_fc_after_pool = x_fc
+
         # x_conv, levels_conv = self.pooler_conv(x_conv, proposals)
         # x_fc, levels_fc = self.pooler_fc(x_fc, proposals)
 
@@ -316,6 +321,9 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         for i in range(self.shared_num_stack):
             x_conv = self.shared_nonlocal[i](x_conv)
 
+        x_conv_before_avg = x_conv
+        x_conv_after_avg = self.avgpool(x_conv_before_avg)
+
         ## seperate
         x_cls = x_conv
         x_reg = x_conv
@@ -324,6 +332,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         for i in range(self.reg_num_stack):
             x_reg = self.reg_nonlocal[i](x_reg)
          
+        
         x_cls = self.avgpool(x_cls)
         x_cls = x_cls.view(x_cls.size(0), -1)
         x_reg = self.avgpool(x_reg)
@@ -339,10 +348,12 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         # print (identity[0][0:50])
         # exit()
 
-        identity = F.relu(self.fc6(identity))
+        fc_first = self.fc6(identity)
+        identity = F.relu(fc_first)
+        # identity = F.relu(self.fc6(identity))
         identity = F.relu(self.fc7(identity))
 
-        return tuple((x_cls, x_reg, identity, mask, mask_fc))
+        return tuple((x_cls, x_reg, identity, mask, mask_fc, x_conv_after_pool, x_conv_before_avg, x_conv_after_avg,x_fc_after_pool, fc_first))
 
 
 
