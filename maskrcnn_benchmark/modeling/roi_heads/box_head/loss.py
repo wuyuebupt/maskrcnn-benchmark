@@ -233,6 +233,7 @@ def make_roi_box_loss_evaluator(cfg):
         cfg.MODEL.ROI_HEADS.BG_IOU_THRESHOLD,
         allow_low_quality_matches=False,
     )
+    ## another matcher for cascade rcnn
 
     bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
     box_coder = BoxCoder(weights=bbox_reg_weights)

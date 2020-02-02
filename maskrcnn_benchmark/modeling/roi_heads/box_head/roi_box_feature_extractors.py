@@ -280,6 +280,10 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         self.fc6 = make_fc(input_size, representation_size, use_gn)
         self.fc7 = make_fc(representation_size, representation_size, use_gn)
 
+        ## 
+        self.fc6_stage2 = make_fc(input_size, representation_size, use_gn)
+        self.fc7_stage2 = make_fc(representation_size, representation_size, use_gn)
+
     def forward(self, x, proposals):
         x_conv = x
         x_fc = x
@@ -290,6 +294,7 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
 
 
         identity = x_fc
+        identity_stage2 = x_fc
         ### model Y
         x_conv =  self.nonlocal_conv(x_conv)
         ## shared
@@ -315,7 +320,15 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         identity = F.relu(self.fc6(identity))
         identity = F.relu(self.fc7(identity))
 
-        return tuple((x_cls, x_reg, identity, mask, mask_fc))
+
+        ## detach the stage 2
+        identity_stage2_detach = identity_stage2.detach()
+
+        identity_stage2_detach = identity_stage2_detach.view(identity_stage2_detach.size(0), -1)
+        identity_stage2_detach = F.relu(self.fc6_stage2(identity_stage2_detach))
+        identity_stage2_detach = F.relu(self.fc7_stage2(identity_stage2_detach))
+
+        return tuple((x_cls, x_reg, identity, identity_stage2_detach, mask, mask_fc))
 
 
 

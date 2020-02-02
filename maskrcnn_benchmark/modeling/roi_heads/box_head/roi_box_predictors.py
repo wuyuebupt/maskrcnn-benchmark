@@ -124,6 +124,16 @@ class FPNPredictorNeighbor(nn.Module):
         for l in [self.cls_score_fc, self.bbox_pred_fc]:
             nn.init.constant_(l.bias, 0)
 
+        ## fc stage2
+        self.cls_score_fc_stage2 = nn.Linear(representation_size_fc, num_classes)
+        self.bbox_pred_fc_stage2 = nn.Linear(representation_size_fc, num_bbox_reg_classes * 4)
+
+        nn.init.normal_(self.cls_score_fc_stage2.weight, std=0.01)
+        nn.init.normal_(self.bbox_pred_fc_stage2.weight, std=0.001)
+        for l in [self.cls_score_fc_stage2, self.bbox_pred_fc_stage2]:
+            nn.init.constant_(l.bias, 0)
+
+
     def forward(self, x):
         ## detach the variable if nacessary
         ## detach can not be in-place
@@ -173,7 +183,19 @@ class FPNPredictorNeighbor(nn.Module):
         # scores_fc = self.cls_score_fc(x[2])
         # bbox_deltas_fc = self.bbox_pred_fc(x[2])
 
-        return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[3], x[4]
+
+
+        ## cascade fc stage 2, stop gradient no use here
+        ## fc cls
+        x_fc_stage2_cls = x[3]
+        x_fc_stage2_reg = x[3]
+        scores_fc_stage2 = self.cls_score_fc_stage2(x_fc_stage2_cls)
+
+        ## fc reg
+        bbox_deltas_fc_stage2 = self.bbox_pred_fc_stage2(x_fc_stage2_reg)
+
+        return scores, bbox_deltas, scores_fc, bbox_deltas_fc, scores_fc_stage2, bbox_deltas_fc_stage2, x[4], x[5]
+        # return scores, bbox_deltas, scores_fc, bbox_deltas_fc, x[3], x[4]
 
 
 
