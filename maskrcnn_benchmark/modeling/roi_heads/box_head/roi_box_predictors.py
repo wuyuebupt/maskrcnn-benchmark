@@ -167,7 +167,6 @@ class FPNPredictorNeighbor(nn.Module):
         else:
             assert(False, "error")
 
-
         ## fc reg
         if self.loss_stop_gradient[3] == 0:
             x_fc_reg_detach = x_fc_reg.detach()

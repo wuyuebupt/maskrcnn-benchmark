@@ -10,6 +10,10 @@ from .attention import NONLocalBlock2D
 
 from ...utils import cat
 
+from maskrcnn_benchmark.modeling.box_coder import BoxCoder
+from maskrcnn_benchmark.structures.bounding_box import BoxList
+import copy
+
 class ProposalMapper(object):
     """
     map proposal with a level   
@@ -38,6 +42,15 @@ class ROIBoxHead(torch.nn.Module):
 
         self.loss_evaluator = make_roi_box_loss_evaluator(cfg)
 
+        cfg_stage2 = copy.deepcopy(cfg)
+        cfg_stage2.MODEL.ROI_HEADS.FG_IOU_THRESHOLD=0.6
+        cfg_stage2.MODEL.ROI_HEADS.BG_IOU_THRESHOLD=0.6
+        print (cfg.MODEL.ROI_HEADS.FG_IOU_THRESHOLD)
+        cfg.freeze()
+        cfg_stage2.freeze()
+        
+        self.loss_evaluator_stage2 = make_roi_box_loss_evaluator(cfg_stage2)
+
         conv_fc_threshold = cfg.MODEL.ROI_BOX_HEAD.CONV_FC_THRESHOLD
         self.map_proposal_threshold=ProposalMapper(conv_fc_threshold)
 
@@ -49,6 +62,36 @@ class ROIBoxHead(torch.nn.Module):
         self.fc_reg_weight = mask_loss[3]
 
         # self.evaluation_flags = cfg.TEST.EVALUATION_FLAGS
+        bbox_reg_weights = cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
+        self.box_coder = BoxCoder(weights=bbox_reg_weights)
+
+
+
+
+    def regress_by_class(self, rois, proposals, label):
+        """Regress the bbox for the predicted class. Used in Cascade R-CNN.
+        Args:
+            rois (Tensor): shape (n, 4) or (n, 5)
+            label (Tensor): shape (n, )
+            bbox_pred (Tensor): shape (n, 4*(#class+1)) or (n, 4)
+        Returns:
+            Tensor: Regressed bboxes, the same shape as input rois.
+        """
+        label = label * 4
+        inds = torch.stack((label, label + 1, label + 2, label + 3), 1)
+        bbox_pred = torch.gather(rois, 1, inds)
+        # print (bbox_pred.shape)
+
+        # label.shape
+
+        ## pos
+        # inds_pos = torch.nonzero(label > 0).squeeze(1)
+        # proposals[inds_pos, :] = bbox_pred[inds_pos, :]
+        # return proposals
+        ## neg
+        # inds_neg = torch.nonzero(label == 0).squeeze(1)
+        # bbox_pred[inds_neg, :] = proposals[inds_neg, :]
+        return bbox_pred
 
     def forward(self, features, proposals, targets=None):
         """
@@ -65,12 +108,19 @@ class ROIBoxHead(torch.nn.Module):
                 head. During testing, returns an empty dict.
         """
 
+        # proposals_all = proposals
+        # print (proposals_all)
         if self.training:
             # Faster R-CNN subsamples during training the proposals with a fixed
             # positive / negative ratio
             with torch.no_grad():
                 proposals = self.loss_evaluator.subsample(proposals, targets)
 
+        # # proposals_all = proposals
+        # print (proposals_all)
+
+
+        
         # extract features that will be fed to the final classifier. The
         # feature_extractor generally corresponds to the pooler + heads
         x = self.feature_extractor(features, proposals)
@@ -78,6 +128,65 @@ class ROIBoxHead(torch.nn.Module):
         # class_logits, box_regression = self.predictor(x)
         # class_logits, box_regression, class_logits_fc, box_regression_fc, mask, mask_fc = self.predictor(x)
         class_logits, box_regression, class_logits_fc, box_regression_fc, class_logits_fc_stage2,  box_regression_fc_stage2, mask, mask_fc = self.predictor(x)
+
+        ## 
+        # print (class_logits_fc_stage2_.shape)
+        ### stage 2
+        ## update proposal regress by classes
+        # print (proposals[0].shape)
+        # print (proposals[0])
+        # rois = proposals[0].bbox
+        boxes = proposals
+      
+        # print (rois)
+        # print (class_logits_fc.shape)
+
+        ## fc cls results 
+        bbox_label = class_logits_fc.argmax(1)
+
+        ## conv cls results 
+        # bbox_label = class_logits.argmax(1)
+        # print (bbox_label.shape)
+        # print (bbox_label)
+         
+        boxes_per_image = [len(box) for box in boxes]
+        # print (boxes_per_image)
+        # exit()
+        concat_boxes = torch.cat([a.bbox for a in boxes], dim=0)
+        # print (concat_boxes.shape)
+
+        rois_new = self.box_coder.decode(box_regression.view(sum(boxes_per_image), -1), concat_boxes)
+        # rois_new = self.box_coder.decode(box_regression_fc.view(sum(boxes_per_image), -1), concat_boxes)
+
+        #### decode from conv box results, but class from fc? 
+
+
+        # print (rois_new.shape)
+        proposals_new_box = self.regress_by_class(rois_new, concat_boxes, bbox_label)
+
+        ## keep negative rois maybe???
+
+        # rint (proposals_new_box)
+
+        image_shape = proposals[0].size
+        proposals_new_ = BoxList(proposals_new_box, image_shape, mode="xyxy")
+        # print (proposals[0].extra_fields)
+        for extra_field in proposals[0].extra_fields:
+            proposals_new_.add_field(extra_field, proposals[0].get_field(extra_field))
+
+        proposals_new = [proposals_new_]
+
+        if self.training:
+            # Faster R-CNN subsamples during training the proposals with a fixed
+            # positive / negative ratio
+            with torch.no_grad():
+                proposals_new = self.loss_evaluator_stage2.subsample(proposals_new, targets)
+        
+        ## update prediction
+        x_stage2 = self.feature_extractor(features, proposals_new)
+        class_logits_, box_regression_, class_logits_fc_, box_regression_fc_, class_logits_fc_stage2_,  box_regression_fc_stage2_, mask_, mask_fc_ = self.predictor(x_stage2)
+
+
 
         if not self.training:
             # print (class_logits.shape)
@@ -145,8 +254,18 @@ class ROIBoxHead(torch.nn.Module):
             ## results from conv + fc
             # result = self.post_processor((class_logits_combine, box_regression_combine), proposals)
             result = []
+
             for i in range(self.num_evaluation):
-                result_ = self.post_processor[i]((class_logits, box_regression, class_logits_fc, box_regression_fc), proposals)
+                result_ = self.post_processor[i]((class_logits, box_regression, class_logits_fc, box_regression_fc, class_logits_fc_stage2), proposals)
+                # result_ = self.post_processor[i]((class_logits_fc, box_regression, class_logits_fc_stage2, box_regression, class_logits_fc_stage2), proposals)
+                # result_ = self.post_processor[i]((class_logits_, box_regression_, class_logits_fc_stage2_, box_regression_fc_, class_logits_fc_stage2_), proposals_new)
+                result.append(result_)
+
+            for i in range(self.num_evaluation):
+                result_ = self.post_processor[i]((class_logits_, box_regression_, class_logits_fc_stage2_, box_regression_fc_, class_logits_fc_stage2_), proposals_new)
+                # result_ = self.post_processor[i]((class_logits_fc, box_regression_, class_logits_fc_stage2_, box_regression_, class_logits_fc_stage2_), proposals_new)
+                # result_ = self.post_processor[i]((class_logits_, box_regression_, class_logits_fc_, box_regression_fc_, class_logits_fc_stage2_), proposals_new)
+                # result_ = self.post_processor[i]((class_logits_, box_regression_, class_logits_fc_, box_regression_fc_), proposals)
                 result.append(result_)
             # print (len(result))
             # exit()
@@ -160,9 +279,10 @@ class ROIBoxHead(torch.nn.Module):
             [class_logits_fc], [box_regression_fc], [mask_fc]
         )
 
-        loss_classifier_fc_stage2, loss_box_reg_fc_stage2 = self.loss_evaluator(
-            [class_logits_fc_stage2], [box_regression_fc_stage2], [mask_fc]
+        loss_classifier_fc_stage2, loss_box_reg_fc_stage2 = self.loss_evaluator_stage2(
+            [class_logits_fc_stage2_], [box_regression_fc_stage2_], [mask_fc]
         )
+
         ## loss weights
         # print (loss_classifier)
         # print (loss_box_reg)

@@ -17,7 +17,8 @@ def compute_on_dataset(model, data_loader, device):
     model.eval()
 
     results_dict_list = []
-    for i in range(4):
+    # for i in range(4):
+    for i in range(8):
         results_dict_list.append({})
     # results_dict = {}
     cpu_device = torch.device("cpu")
@@ -37,7 +38,7 @@ def compute_on_dataset(model, data_loader, device):
             results_dict_list[j].update(
                 {img_id: result for img_id, result in zip(image_ids, out)}
             )
-        # if i == 10:
+        # if i == 200:
         #     break
     ## remove empty dicts
     results_dict_list_ = []

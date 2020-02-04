@@ -66,7 +66,8 @@ class Checkpointer(object):
             # self.optimizer.load_state_dict(checkpoint.pop("optimizer"))
         if "scheduler" in checkpoint and self.scheduler:
             self.logger.info("Loading scheduler from {}".format(f))
-            self.scheduler.load_state_dict(checkpoint.pop("scheduler"))
+            ## disable loading lr schedule to reset the lr
+            # self.scheduler.load_state_dict(checkpoint.pop("scheduler"))
 
         # return any further checkpoint data
         return checkpoint

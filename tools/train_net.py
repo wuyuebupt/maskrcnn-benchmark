@@ -454,7 +454,7 @@ def main():
     cfg.SOLVER.STEPS = (args.lr_steps[0], args.lr_steps[1])
     # print (cfg.SOLVER.MAX_ITER)
     # print (cfg.SOLVER.STEPS)
-    cfg.freeze()
+    # cfg.freeze()
     # print (cfg)
     # exit()
 

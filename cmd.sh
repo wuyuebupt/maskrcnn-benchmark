@@ -54,12 +54,18 @@ python  tools/train_net.py \
 --mask-fc 1 1 1 1 \
 --maplevel-conv 0 112 224 448 100000 \
 --mask-conv 1 1 1 1 \
---mask-loss 0.5 0.5 0.5 0.5 \
+--mask-loss 0.5 2.0 1.4 0.6 \
 --conv-fc-threshold 224 \
---lr-steps 190000 200000 210000 \
+--lr-steps 220000 240000 260000 \
 --stop-gradient 1 1 1 1 \
 --evaluation-flags 1 1 1 1
 
+# --mask-loss 0.5 0.5 0.5 0.5 \
+## 4 2 2
+## 40000, 20000, 20000
+
+##  20000: 2h
+## 180000: 18h
 ###### --stop-gradient
 # conv cls
 # conv reg
