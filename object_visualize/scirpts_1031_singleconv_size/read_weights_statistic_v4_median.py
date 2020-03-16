@@ -114,6 +114,7 @@ if __name__ == '__main__':
   ### 100 as the gt boxes
   iou_index = [np.zeros((num_bbox, 1), dtype=int), np.zeros((num_bbox, 1), dtype=int), np.zeros((num_bbox, 1), dtype=int)]
   datafile =  'weights_100/' + line
+  # datafile =  'weights/' + line
 
   data = sio.loadmat(datafile)
   bbox = data['bbox']
@@ -124,6 +125,7 @@ if __name__ == '__main__':
 
 
   weights_array = ['weights_075', 'weights_100', 'weights_125']
+  # weights_array = ['weights']
 
   for counter, weight_name in enumerate(weights_array):
       # datafile = 'weights_100/' + line

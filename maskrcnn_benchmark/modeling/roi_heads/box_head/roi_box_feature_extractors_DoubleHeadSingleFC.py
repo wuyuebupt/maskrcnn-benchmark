@@ -277,19 +277,36 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
 
 
         ## mlp 
-        self.fc6_cls = make_fc(input_size, representation_size, use_gn)
-        self.fc7_cls = make_fc(representation_size, representation_size, use_gn)
-
-        self.fc6_reg = make_fc(input_size, representation_size, use_gn)
-        self.fc7_reg = make_fc(representation_size, representation_size, use_gn)
+        self.fc6 = make_fc(input_size, representation_size, use_gn)
+        self.fc7 = make_fc(representation_size, representation_size, use_gn)
 
     def forward(self, x, proposals):
         x_conv = x
         x_fc = x
+        # print (x[0].shape)
         x_conv, mask = self.pooler_conv(x_conv, proposals)
         x_fc, mask_fc = self.pooler_fc(x_fc, proposals)
         # x_conv, levels_conv = self.pooler_conv(x_conv, proposals)
         # x_fc, levels_fc = self.pooler_fc(x_fc, proposals)
+
+        ## fc flip, NCHW
+        # print (x_fc) 
+        # print (x_fc.shape) 
+        # print (x_fc[0,0,:,:]) 
+
+        ## ## flip dimension  H
+        ## x_conv = torch.flip(x_conv, [2])
+        ## x_fc = torch.flip(x_fc, [2])
+        ## ## flip dimension  W
+        ## x_conv = torch.flip(x_conv, [3])
+        ## x_fc = torch.flip(x_fc, [3])
+
+        # x_fc = torch.flip(x_fc, [3])
+
+        # x_fc = torch.flip(x_fc, [3])
+        # print (x_fc.shape) 
+        # print (x_fc[0,0,:,:]) 
+        # exit()
 
 
         identity = x_fc
@@ -313,21 +330,19 @@ class FPN2MLPFeatureExtractorNeighbor(nn.Module):
         x_reg = x_reg.view(x_reg.size(0), -1)
 
         ### MLP
+        # print (identity)
+        # print (identity[0,:,:,:])
+        # print (identity[0,:,:,:].shape)
         identity = identity.view(identity.size(0), -1)
-        x_fc_cls = identity
-        x_fc_reg = identity
+        # print (identity[0])
+        # print (identity[0].shape)
+        # print (identity[0][0:50])
+        # exit()
 
-        # identity = F.relu(self.fc6(identity))
-        # identity = F.relu(self.fc7(identity))
+        identity = F.relu(self.fc6(identity))
+        identity = F.relu(self.fc7(identity))
 
-        ## seperate
-        x_fc_cls = F.relu(self.fc6_cls(x_fc_cls))
-        x_fc_cls = F.relu(self.fc7_cls(x_fc_cls))
-
-        x_fc_reg = F.relu(self.fc6_reg(x_fc_reg))
-        x_fc_reg = F.relu(self.fc7_reg(x_fc_reg))
-
-        return tuple((x_cls, x_reg, x_fc_cls, x_fc_reg, mask, mask_fc))
+        return tuple((x_cls, x_reg, identity, mask, mask_fc))
 
 
 

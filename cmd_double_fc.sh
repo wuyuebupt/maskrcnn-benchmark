@@ -5,8 +5,8 @@ export PYTHONPATH=$PWD/maskrcnn_pythonpath
 ### resnet 101
 # export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/nips/fpn101-1x-DHNew-bc13-back256-conv-att-Ys200g4-c1024x512-L112x224x448-m125x100-wc04x16-f14x06--wu1-input-1553839402050_9330
 ### resnet 50
-# export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/single_head_eval/fpn50-1x-dh-b12-back256-conv-only-Ys400g4-c1024x512-112x224x448-m10-wc10x10-f00x00-sc2-input-1553303475036_3836/
-export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/double-head/fpn50-1x-DHNew-bc13-back256-conv-only-Ys033g4-c1024x512-L112x224x448-m100x100-wc10x10-f00x00-wu1-input-1553839402050_11795
+# export OUTPUT_DIR=/work/dataforYinpeng/saw_models_toeval/single_head_eval/fpn50-1x-dh-b12-back256-conv-only-Ys400g4-c1024x512-112x224x448-m10-wc00x00-f10x10-sc2-input-1553303475036_3965/
+export OUTPUT_DIR=/work/maskrcnn/iccv19/model_output_tmp_doublefc/
 
 
 
@@ -49,9 +49,9 @@ python  tools/train_net.py \
 --data-dir ../maskrcnn-benchmark-file/datasets/ \
 --config-file $CONFIG_YAML \
 --nonlocal-cls-num-group 4 \
---nonlocal-cls-num-stack 3 \
+--nonlocal-cls-num-stack 0 \
 --nonlocal-reg-num-group 4 \
---nonlocal-reg-num-stack 3 \
+--nonlocal-reg-num-stack 0 \
 --nonlocal-shared-num-group 4 \
 --nonlocal-shared-num-stack 0 \
 --nonlocal-inter-channels $INTER_CHANNELS \
@@ -72,7 +72,7 @@ python  tools/train_net.py \
 --conv-fc-threshold 224 \
 --lr-steps 100 200 300 \
 --stop-gradient 1 1 1 1 \
---evaluation-flags 1 0 0 0
+--evaluation-flags 0 1 0 0
 
 ###### --stop-gradient
 # conv cls

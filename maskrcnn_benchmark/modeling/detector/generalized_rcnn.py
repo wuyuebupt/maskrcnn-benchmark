@@ -151,7 +151,7 @@ class GeneralizedRCNN(nn.Module):
             ## bug was here
             proposals_ = [boxlist]
 
-            ## new path
+            ## new path 
             newpath = path[0] + '_object_' + str(target_index) + '_class_'+ str(label) 
             if self.roi_heads:
                 x, result, detector_losses = self.roi_heads(features, proposals_, targets, newpath)
